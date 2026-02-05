@@ -16,7 +16,7 @@ class BacktestEngine:
         self.equity_curve = []
 
 
-    def run(self, capital=None, contract_size=12500, risk=0.01, trade_cost=2.0):
+    def run(self, capital=None, contract_size=12500, risk=0.01, trade_cost=2.0, contract_price=0):
         print(f"Running backtest (Mode: {'USD Futures' if capital else 'Theoretical %'})..")
         
         # initial parameters
@@ -135,6 +135,8 @@ class BacktestEngine:
                         # $$$ mode
                         dollar_amount_to_risk = self.banked_equity * self.risk
                         self.n_contracts = math.floor(dollar_amount_to_risk // dist_to_stop_usd) if dist_to_stop_usd > 0 else 0
+                        if contract_price is not None and self.n_contracts > 0:
+                            self.n_contracts = math.floor(self.banked_equity / (contract_price * self.n_contracts))
                         
                         # only inter with full contracts
                         if self.n_contracts > 0:

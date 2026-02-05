@@ -24,6 +24,7 @@ class MarketData:
 
             # standardize column names (lowercase)
             self.df.columns = [col.lower() for col in self.df.columns]
+            self.df = self.df.drop(0, axis=0)
 
             # 1.1 ensure that all important columns are present
             cols_needed = ["close", "high", "low", "open", "volume", "symbol", "datetime"]

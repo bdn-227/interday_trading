@@ -17,4 +17,6 @@ Included:
 - some code hygene to ensure there is not look ahead bias etc.
 - account for slipage better
 - compare the suggested trading volume to the actual trading volume
-- get rich
+- make sure backtest stops upon a 100% drawdown
+- cap maximum number of draw downs
+- account for intra day volatility to avoid margin calls
