@@ -16,7 +16,7 @@ class BacktestEngine:
         self.equity_curve = []
 
 
-    def run(self, capital=None, contract_size=12500, risk=0.01, trade_cost=2.0, contract_price=0):
+    def run(self, capital=None, contract_size=12500, risk=0.01, trade_cost=2.0, contract_price=0, max_leverage=10):
         print(f"Running backtest (Mode: {'USD Futures' if capital else 'Theoretical %'})..")
         
         # initial parameters
@@ -135,19 +135,20 @@ class BacktestEngine:
                         # $$$ mode
                         dollar_amount_to_risk = self.banked_equity * self.risk
                         self.n_contracts = math.floor(dollar_amount_to_risk // dist_to_stop_usd) if dist_to_stop_usd > 0 else 0
-                        if contract_price is not None and self.n_contracts > 0:
+                        if (contract_price is not None) and (self.n_contracts > 0):
                             self.n_contracts = math.floor(self.banked_equity / (contract_price * self.n_contracts))
                         
-                        # only inter with full contracts
+                        # only with full contracts
                         if self.n_contracts > 0:
                             self.position = target_state
                             entry_price = temp_entry_price
                             self.entry_date = row["datetime"]
-                            self.leverage = (self.n_contracts * contract_size * entry_price) / self.banked_equity
+                            self.leverage = max((self.n_contracts * contract_size * entry_price) / self.banked_equity, max_leverage)
+                    
                     else:
                         # theory mode
                         if dist_to_stop_pct > 0:
-                            self.leverage = risk / dist_to_stop_pct
+                            self.leverage = max(risk / dist_to_stop_pct, max_leverage)
                         # $$$ mode
                         else:
                             self.leverage = 1.0

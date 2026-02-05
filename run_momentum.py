@@ -35,8 +35,8 @@ price_data.add_atr(length=atr_length)
 # backtest
 strategy = EmaCrossoverStrategy(ema_short=ema_short, ema_long=ema_long, length_atr=atr_length, atr_multiplier=atr_multiplier)
 backtest = BacktestEngine(price_data, strategy)
-equity_curve = backtest.run(risk=0.01, capital=20_000, trade_cost=2, contract_price=250)
-backtest.plot_equity_df(normalize=True, log_axis=True)
+equity_curve = backtest.run(risk=0.02, capital=10_000, trade_cost=2, contract_price=300)
+backtest.plot_equity_df(normalize=True, log_axis=False)
 
 # perform monte carlo
 simulations = backtest.monte_carlo(n_simulations=n_simulations*10, drawdown=0.5)
