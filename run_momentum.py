@@ -20,8 +20,8 @@ csv = pd.read_csv("data/eur_usd.csv")
 price_data = MarketData(csv, market="XFRA")
 
 # parameters
-ema_short = 20
-ema_long = 50
+ema_short = 10
+ema_long = 20
 atr_length = 14
 atr_multiplier = 3
 n_simulations = 100
@@ -35,7 +35,8 @@ price_data.add_atr(length=atr_length)
 # backtest
 strategy = EmaCrossoverStrategy(ema_short=ema_short, ema_long=ema_long, length_atr=atr_length, atr_multiplier=atr_multiplier)
 backtest = BacktestEngine(price_data, strategy)
-equity_curve = backtest.run(risk=0.02, capital=10_000, trade_cost=2, contract_price=300)
+equity_curve = backtest.run_future(risk=0.01, capital=1000)
+print(equity_curve)
 backtest.plot_equity_df(normalize=True, log_axis=False)
 
 # perform monte carlo

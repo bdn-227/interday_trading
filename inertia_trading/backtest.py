@@ -16,168 +16,218 @@ class BacktestEngine:
         self.equity_curve = []
 
 
-    def run(self, capital=None, contract_size=12500, risk=0.01, trade_cost=2.0, contract_price=0, max_leverage=10):
-        print(f"Running backtest (Mode: {'USD Futures' if capital else 'Theoretical %'})..")
+    def run_future(self, capital=1_000, risk=0.01):
+        """
+        Backtesting method for futures. this features short, long and exits. sizing based in risk.
+        """
+        print(f"Running backtest (Basis Points Mode | Start: {capital})..")
         
-        # initial parameters
+        # initialize
+        self.capital = capital
         self.risk = risk
-        self.banked_equity = capital if capital else 1.0
         self.position = 0
-        self.leverage = 0
-        self.n_contracts = 0
-        self.n_contracts_ls = []
-        entry_price = 0
-        self.trade_log = []
-        self.equity_curve = []
-        self.step_curve = []
-        self.target_states = []
-        self.close_l = []
-        self.datetime_ls = []
-        self.position_ls = []
-        self.floating_returns = []
+        self.entry_price = 0.0
         self.entry_date = None
+        self.units = 0.0
+        self.sl_price = None
+        
+        # lists for logging
+        self.equity_curve = []
+        self.realized_curve = []
+        self.position_ls = []
+        self.trade_log = []
+        self.datetime_ls = []
+        self.close_ls = []
+        self.units_ls = []
+        
+        # filtering of data
+        required_cols = self.required_indicators + ["future.open.1", "future.low.1", "future.high.1"]
+        clean_data = self.data.dropna(subset=required_cols).copy()
 
-        # prefilter the data for backtest
-        clean_data = self.data.dropna(subset=self.required_indicators + [f"future.open.1", f"future.low.1", f"future.high.1"]).copy()
-        normval = clean_data["close"].iloc[0]
-
-
-        # iterate through time
+        # backtesting loop
         for idx, row in clean_data.iterrows():
             
-            # get the decision of the strategy
-            target_state, sl_price, limit_price = self.strategy.on_bar(row, self.position)
-            today_close = row['close']
-            tomorrow_open = row[f"future.open.1"]
+            # extract the data, including tomorrows prices --> this is interday trading, hence buy descisions are based on today's
+            # close and executed in the coming morning. we only trade limit orders and fixed stop losses. therefore,
+            # we check of the orders would be filled the next morning
             current_date = row["datetime"]
+            today_close = row['close']
+            f_open = row["future.open.1"]
+            f_low  = row["future.low.1"]
+            f_high = row["future.high.1"]
 
-            # mark-to-market tracking
-            floating_pnl_pct = 0
+            # strategy is being executed here --> as return we get -1, 0 or 1 --> short, exit, sell
+            target_state, strat_sl, strat_limit = self.strategy.on_bar(row, self.position)
+
+            # variable for todays profit and losses
+            pnl = 0.0
+
+            # 1.) check intraday stop losses. does intraday volatility kill us?
+            stop_hit = False
+            if self.position == 1 and self.sl_price:
+                if f_low <= self.sl_price:
+                    
+                    # are our long positions killed?
+                    exit_price = self.sl_price
+                    pnl = (exit_price - self.entry_price) * self.units
+                    self.capital += pnl
+                    
+                    self.trade_log.append({
+                        "entry_date": self.entry_date,
+                        'exit_date': current_date, 
+                        'type': 'STOP_LOSS (L)', 
+                        'entry': self.entry_price, 
+                        'exit': exit_price, 
+                        'pnl': pnl, 
+                        'capital': self.capital,
+                        'return': pnl_exit / (self.capital - pnl_exit),
+                    })
+                    
+                    self.position = 0
+                    self.units = 0
+                    self.sl_price = None
+                    stop_hit = True
+
+            elif self.position == -1 and self.sl_price:
+                if f_high >= self.sl_price:
+
+                    # are our short positions killed
+                    exit_price = self.sl_price
+                    pnl = (self.entry_price - exit_price) * self.units
+                    self.capital += pnl
+                    
+                    self.trade_log.append({
+                        "entry_date": self.entry_date,
+                        'exit_date': current_date, 
+                        'type': 'STOP_LOSS (S)', 
+                        'entry': self.entry_price, 
+                        'exit': exit_price, 
+                        'pnl': pnl, 
+                        'capital': self.capital,
+                        'return': pnl_exit / (self.capital - pnl_exit),
+                    })
+                    
+                    self.position = 0
+                    self.units = 0
+                    self.sl_price = None
+                    stop_hit = True
+
             
+            # new entries
+            if not stop_hit and target_state != self.position:
+                
+                # are the limit prices reachable
+                is_reachable = (f_low <= strat_limit <= f_high)
+                
+                if is_reachable:
+                    
+                    # exit old position if reversal
+                    if self.position != 0:
+
+                        # close current trade if reversal
+                        pnl_exit = 0
+                        if self.position == 1:
+                            pnl_exit = (strat_limit - self.entry_price) * self.units
+                        else:
+                            pnl_exit = (self.entry_price - strat_limit) * self.units
+                        
+                        self.capital += pnl_exit
+                        self.trade_log.append({
+                            "entry_date": self.entry_date,
+                            'exit_date': current_date, 
+                            'type': 'EXIT', 
+                            'entry': self.entry_price, 
+                            'exit': strat_limit, 
+                            'pnl': pnl_exit, 
+                            'capital': self.capital,
+                        'return': pnl_exit / (self.capital - pnl_exit),
+                        })
+                        self.position = 0
+                        self.units = 0
+
+                    # enter new position
+                    if target_state != 0:
+
+                        # calculate risk-adjusted position size --> risk parameter determines the maximum % of 
+                        # portfolio that we might loose of trade goes wrong, i.e. stop loss is hit
+                        risk_amt = self.capital * self.risk
+                        dist_to_sl = abs(strat_limit - strat_sl)
+                        
+                        if dist_to_sl > 0:
+                            new_units = risk_amt / dist_to_sl
+                        else:
+                            new_units = 0
+                        
+                        # check if intra-day volatility kills us
+                        instant_loss = False
+                        if target_state == 1 and f_low <= strat_sl:
+                            instant_loss = True
+                        elif target_state == -1 and f_high >= strat_sl:
+                            instant_loss = True
+                            
+                        if instant_loss:
+
+                            # here, the new position is stopped instantly (note: this is a conservative assumptionm but we always trigger it)
+                            loss_val = (strat_sl - strat_limit) if target_state == 1 else (strat_limit - strat_sl)
+                            pnl_crash = loss_val * new_units
+                            self.capital += pnl_crash
+                            
+                            self.trade_log.append({
+                                "entry_date": self.entry_date,
+                                'exit_date': current_date, 
+                                'type': 'INSTANT_STOP', 
+                                'entry': strat_limit, 
+                                'exit': strat_sl, 
+                                'pnl': pnl_crash, 
+                                'capital': self.capital,
+                                'return': pnl_exit / (self.capital - pnl_exit),
+                            })
+
+                            # reset parameters upon stop loss
+                            self.position = 0
+                            self.units = 0
+                            self.sl_price = None
+                            
+                        else:
+                            # here, we actually entered a trade and did not get killed instantly
+                            self.position = target_state
+                            self.entry_price = strat_limit
+                            self.entry_date = current_date
+                            self.sl_price = strat_sl
+                            self.units = new_units
+
+
+            # here we perform mark-to-market tracking of portfolio size --> for smooth equity curve
+            floating_pnl = 0
             if self.position == 1:
-                floating_pnl_pct = (today_close - entry_price) / entry_price
+                floating_pnl = (today_close - self.entry_price) * self.units
             elif self.position == -1:
-                floating_pnl_pct = (entry_price - today_close) / entry_price
+                floating_pnl = (self.entry_price - today_close) * self.units
+            total_equity = self.capital + floating_pnl
             
-            # calculate the equity curve
-            if capital:
-                # In $$$
-                price_diff_mtm = (today_close - entry_price) if self.position == 1 else (entry_price - today_close)
-                current_total_equity = self.banked_equity + (price_diff_mtm * self.n_contracts * contract_size)
-            else:
-                # theoretically as return
-                current_total_equity = self.banked_equity * (1 + (floating_pnl_pct * self.leverage))
-
-            # populate lists (Record state BEFORE it changes in the blocks below)
-            self.equity_curve.append(current_total_equity)
-            self.step_curve.append(self.banked_equity)
-            self.target_states.append(target_state)
-            self.close_l.append(today_close)
+            self.equity_curve.append(total_equity)
+            self.realized_curve.append(self.capital)
             self.datetime_ls.append(current_date)
             self.position_ls.append(self.position)
-            self.floating_returns.append(floating_pnl_pct * self.leverage)
-            self.n_contracts_ls.append(self.n_contracts)
+            self.close_ls.append(today_close)
+            self.units_ls.append(self.units)
 
-
-            # EXIT
-            if self.position != 0 and (target_state != self.position):
-                
-                # close positions and calculate returns
-                trade_return = 0
-
-                # closing long
-                if self.position == 1:
-                    trade_return = (tomorrow_open - entry_price) / entry_price
-                
-                # closing short
-                elif self.position == -1:
-                    trade_return = (entry_price - tomorrow_open) / entry_price
-                
-                # count the money 
-                if capital:
-                    # U$$$ mode
-                    price_diff_exit = (tomorrow_open - entry_price) if self.position == 1 else (entry_price - tomorrow_open)
-                    realized_pnl_usd = (price_diff_exit * self.n_contracts * contract_size) - (self.n_contracts * trade_cost)
-                    self.banked_equity += realized_pnl_usd
-                else:
-                    self.banked_equity = self.banked_equity * (1 + (trade_return * self.leverage))
-                
-                # logging trades
-                self.trade_log.append({
-                    'exit_date': row["datetime"],
-                    "entry_date": self.entry_date,
-                    'type': 'LONG' if self.position == 1 else 'SHORT',
-                    'entry': entry_price,
-                    'exit': tomorrow_open,
-                    'return': trade_return * self.leverage,
-                    'leverage': self.leverage,
-                    'contracts': self.n_contracts,
-                    'new_equity': self.banked_equity
-                })
-                
-                # now reset position to zero
-                self.position = 0 
-                self.leverage = 0
-                self.n_contracts = 0
-                self.entry_date = None
-
-            # open new positions
-            if target_state != 0 and self.position == 0:
-                # Temporary entry price to calculate sizing
-                temp_entry_price = tomorrow_open
-                
-                # risk-aware position sizing
-                if sl_price:
-                    dist_to_stop_pct = abs(temp_entry_price - sl_price) / temp_entry_price
-                    dist_to_stop_usd = abs(temp_entry_price - sl_price) * contract_size
-                    
-                    if capital:
-                        # $$$ mode
-                        dollar_amount_to_risk = self.banked_equity * self.risk
-                        self.n_contracts = math.floor(dollar_amount_to_risk // dist_to_stop_usd) if dist_to_stop_usd > 0 else 0
-                        if (contract_price is not None) and (self.n_contracts > 0):
-                            self.n_contracts = math.floor(self.banked_equity / (contract_price * self.n_contracts))
-                        
-                        # only with full contracts
-                        if self.n_contracts > 0:
-                            self.position = target_state
-                            entry_price = temp_entry_price
-                            self.entry_date = row["datetime"]
-                            self.leverage = max((self.n_contracts * contract_size * entry_price) / self.banked_equity, max_leverage)
-                    
-                    else:
-                        # theory mode
-                        if dist_to_stop_pct > 0:
-                            self.leverage = max(risk / dist_to_stop_pct, max_leverage)
-                        # $$$ mode
-                        else:
-                            self.leverage = 1.0
-                        self.position = target_state
-                        entry_price = temp_entry_price
-                        self.entry_date = row["datetime"]
-                else:
-                    # fallback if no stop loss
-                    self.position = target_state
-                    entry_price = temp_entry_price
-                    self.entry_date = row["datetime"]
-                    self.leverage = 1.0
-                    self.n_contracts = 1 if capital else 0
+        # print final capital size
+        print(f"Final capital: {self.equity_curve[-1]:.2f}")
         
-        # print logs
-        print(f"Final Equity: {self.equity_curve[-1]:.4f}")
-        equity_df = pd.DataFrame({"equity": self.equity_curve,
-                                  "equity_norm": np.array(self.equity_curve)/self.equity_curve[0], 
-                                  "realized_equity": np.array(self.step_curve),
-                                  "realized_equity_norm": np.array(self.step_curve)/self.step_curve[0],
-                                  "close": self.close_l,
-                                  "close_norm": self.close_l/normval,
-                                  "return": self.floating_returns,
-                                  "target_states": self.target_states,
-                                  "position": self.position_ls,
-                                  "n_contracts": self.n_contracts_ls
-                                  }, index=self.datetime_ls)
-        self.equity_df = equity_df
-        return equity_df
+        # save everything as dataframe for plotting
+        self.equity_df = pd.DataFrame({
+            "equity": self.equity_curve,
+            "equity_norm": np.array(self.equity_curve) / self.equity_curve[0],
+            "realized_equity": np.array(self.realized_curve),
+            "realized_equity_norm": np.array(self.realized_curve) / self.realized_curve[0],
+            "close": np.array(self.close_ls),
+            "close_norm": np.array(self.close_ls) / self.close_ls[0],
+            "position": self.position_ls,
+            "units": self.units_ls,
+        }, index=self.datetime_ls)
+        return self.equity_df
+
 
 
     def calc_performance_stats(self):
@@ -286,13 +336,12 @@ class BacktestEngine:
             fillcolor='rgba(255, 0, 0, 0.1)',
         ), row=2, col=1, secondary_y=False)
 
-        # add number of contracts
-        if 'n_contracts' in self.equity_df.columns:
-            fig.add_trace(go.Scatter(
+        # add units
+        fig.add_trace(go.Scatter(
                 x=self.equity_df.index,
-                y=self.equity_df['n_contracts'],
+                y=self.equity_df['units'],
                 mode='lines',
-                name='Contracts',
+                name='Unit',
                 line=dict(color='rgba(0, 128, 0, 0.5)', width=2, shape='hv'),
             ), row=2, col=1, secondary_y=True)
 
@@ -315,7 +364,7 @@ class BacktestEngine:
         # axis Labels
         fig.update_yaxes(title_text="Equity" + (" (Norm)" if normalize else " ($)"), row=1, col=1)
         fig.update_yaxes(title_text="Drawdown", tickformat='.0%', row=2, col=1, secondary_y=False)
-        fig.update_yaxes(title_text="Contracts", row=2, col=1, secondary_y=True, showgrid=False)
+        fig.update_yaxes(title_text="Units", row=2, col=1, secondary_y=True, showgrid=False)
         fig.update_xaxes(showgrid=False)
         if log_axis:
             fig.update_yaxes(type="log", row=1, col=1)
