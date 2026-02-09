@@ -3,19 +3,39 @@ import pandas_ta as ta
 import pandas_market_calendars as mcal
 import numpy as np
 from IPython.display import display
+import random
+from ib_insync import util, IB, Forex, Index, Stock
 
 
 class MarketData:
-    def __init__(self, raw_df, market = "XFRA"):
+    def __init__(self, data_in, market = "XFRA"):
         """
         Expects a DataFrame with 'open', 'high', 'low', 'close' columns.
         """
-        self.df = raw_df.copy()
+
+        # conditional branch of input is a dataframe
+        if type(data_in) == pd.DataFrame:
+            self.df = data_in.copy()
+        
+        # conditional branch if input is something that needs to be downloaded
+        if type(data_in) == dict:
+            if "currency" not in data_in.keys():
+                data_in["currency"] = "EUR"
+            if "exchange" not in data_in.keys():
+                data_in["exchange"] = "SMART"
+            self.df = self.download_marketdata(data_in["contract_type"], data_in["symbol"], data_in["exchange"], data_in["currency"])
+        
+        # exit condition
+        if self.df is None:
+            raise ValueError("No dataframe obtained")
+
+        # processing
         self.format_df()
         self.check_integrity(market)
         self.add_next(column="open", shift=1)
         self.add_next(column="low", shift=1)
         self.add_next(column="high", shift=1)
+
 
     def format_df(self):
             """
@@ -26,27 +46,92 @@ class MarketData:
             self.df.columns = [col.lower() for col in self.df.columns]
             self.df = self.df.drop(0, axis=0)
 
-            # 1.1 ensure that all important columns are present
+            # ensure that all important columns are present
             cols_needed = ["close", "high", "low", "open", "volume", "symbol", "datetime"]
             cols_present = [col for col in cols_needed if col in self.df.columns]
             missing_cols = np.setxor1d(cols_needed, cols_present)
             if len(missing_cols):
                 raise ValueError(f"Some columns are missing: {missing_cols}")
             
-            # 2. convert to datetime
+            # convert to datetime
             self.df["datetime"] = pd.to_datetime(self.df["datetime"])
             
-            # 3. add calendar features
+            # add calendar features
             calendar = self.df["datetime"].dt.isocalendar()
             self.df[["year", "week", "day"]] = calendar[["year", "week", "day"]]
             
-            # 4. cast types (ensuring no string-math errors)
+            # cast types (ensuring no string-math errors)
             cols_to_fix = ["close", "high", "low", "open", "volume"]
             self.df[cols_to_fix] = self.df[cols_to_fix].astype(float)
             
-            # 5. sort
+            # sort
             self.df = self.df.sort_values(["symbol", "datetime"]).reset_index(drop=True)
             return self
+
+
+    def download_marketdata(self, contract_type, symbol, exchange, currency):
+
+        # initiate
+        util.startLoop() 
+        ib = IB()
+
+        # # connect to client
+        my_client_id = random.randint(1, 9999)
+        try:
+            ib.connect('127.0.0.1', 7497, clientId=my_client_id)
+        except Exception as e:
+            print(f"Error: {e}")
+
+        # get historic prices
+        ib.reqMarketDataType(3)
+
+        # getting the contract number
+        if contract_type == "Forex":
+            contract = Forex(pair=symbol)
+            whatToShow = "MIDPOINT"
+        elif contract_type == "Index":
+            contract = Index(symbol, exchange, currency)
+            whatToShow = "TRADES"
+        elif contract_type == "Stock":
+            contract = Stock(symbol, exchange, currency)
+            whatToShow = "TRADES"
+        
+        # verify contract existance
+        ib.qualifyContracts(contract)
+        print(f"Requesting: {contract.symbol} on {contract.exchange}...")
+
+        # get the bars
+        bars = ib.reqHistoricalData(
+            contract,
+            endDateTime='',
+            durationStr='50 Y',
+            barSizeSetting='1 day',
+            whatToShow=whatToShow,
+            useRTH=True,
+            formatDate=1
+        )
+
+        # to dataframe
+        df = util.df(bars)
+
+        # disconnext
+        ib.disconnect()
+
+        # return
+        if df is not None and not df.empty:
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.rename({"date": "datetime"}, axis=1)
+            df["date"] = df["datetime"].dt.date
+            df["symbol"] = contract.symbol
+            df["contract_id"] = contract.conId
+            print(f"SUCCESS - {contract.symbol}")
+            return df
+        else:
+            print(f"No data received for {symbol}.")
+
+
+    def write_df(self, filename):
+        self.df.to_csv(f"{filename}.csv", index=False)
     
 
     def check_integrity(self, market):
