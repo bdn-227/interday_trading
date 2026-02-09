@@ -18,5 +18,5 @@ Included:
 - account for slipage better
 - compare the suggested trading volume to the actual trading volume
 - make sure backtest stops upon a 100% drawdown
-- cap maximum number of draw downs
-- account for intra day volatility to avoid margin calls
+- cap maximum number of draw downs --> no more than 100%
+- add a new backtest method for etfs: --> long only and intraday volatility does not kill us

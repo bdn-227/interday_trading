@@ -229,6 +229,167 @@ class BacktestEngine:
         return self.equity_df
 
 
+    def run_etf(self, capital=1_000, risk=0.01):
+        """
+        Backtesting method for ETFs (Long Only).
+        - No intraday liquidations (Cash/Asset based).
+        - Stop Loss is checked at Close and executed at Open next day.
+        - Entries/Exits use Limit Orders.
+        """
+        print(f"Running backtest (ETF Mode | Start: {capital})..")
+        
+        # initialize
+        self.capital = capital
+        self.risk = risk
+        self.position = 0
+        self.entry_price = 0.0
+        self.entry_date = None
+        self.units = 0.0
+        self.sl_price = None
+        
+        # lists for logging
+        self.equity_curve = []
+        self.realized_curve = []
+        self.position_ls = []
+        self.trade_log = []
+        self.datetime_ls = []
+        self.close_ls = []
+        self.units_ls = []
+        
+        # filter data
+        required_cols = self.required_indicators + ["future.open.1", "future.low.1", "future.high.1"]
+        clean_data = self.data.dropna(subset=required_cols).copy()
+
+        # run backtesting loop
+        for idx, row in clean_data.iterrows():
+            
+            # extract relevant data
+            current_date = row["datetime"]
+            today_close = row['close']
+            f_open = row["future.open.1"]
+            f_low  = row["future.low.1"]
+            f_high = row["future.high.1"]
+
+            # get the target state. here, -1 and 0 are considered exit signals, as we go long only
+            target_state, strat_sl, strat_limit = self.strategy.on_bar(row, self.position)
+
+            # manage stop logic
+            stop_triggered = False
+
+            # stop losses are only triggered at the end of the day, no intraday stop losses required as there
+            # is no requirement for margins
+            if self.position == 1 and self.sl_price:
+                if today_close <= self.sl_price:
+                    stop_triggered = True
+                    
+                    # sell at next market open --> maybe in future switch to limit order
+                    exit_price = f_open
+                    pnl = (exit_price - self.entry_price) * self.units
+                    self.capital += pnl
+                    
+                    # log trade
+                    prev_capital = self.capital - pnl
+                    self.trade_log.append({
+                        "entry_date": self.entry_date,
+                        'exit_date': current_date, 
+                        'type': 'STOP_LOSS (EOD)', 
+                        'entry': self.entry_price, 
+                        'exit': exit_price, 
+                        'pnl': pnl, 
+                        'return': pnl / prev_capital,
+                        'capital': self.capital,
+                    })
+                    
+                    # reset position
+                    self.position = 0
+                    self.units = 0
+                    self.sl_price = None
+
+            # limit order exit
+            if not stop_triggered:
+                
+                # signal processing --> 0 and -1 are exit signals
+                if self.position == 1 and target_state in [0, -1]:
+                    
+                    # here we do a limit exit
+                    is_reachable = (f_low <= strat_limit <= f_high)
+                    
+                    if is_reachable:
+                        pnl_exit = (strat_limit - self.entry_price) * self.units
+                        self.capital += pnl_exit
+                        
+                        # log trade
+                        prev_capital = self.capital - pnl_exit
+                        self.trade_log.append({
+                            "entry_date": self.entry_date,
+                            'exit_date': current_date, 
+                            'type': 'EXIT', 
+                            'entry': self.entry_price, 
+                            'exit': strat_limit, 
+                            'pnl': pnl_exit, 
+                            'return': pnl_exit / prev_capital,
+                            'capital': self.capital,
+                        })
+                        
+                        # reset positions
+                        self.position = 0
+                        self.units = 0
+
+                # enter new positions
+                elif self.position == 0 and target_state == 1:
+                    
+                    # according to limit price
+                    is_reachable = (f_low <= strat_limit <= f_high)
+                    
+                    if is_reachable:
+                        
+                        # risk based position sizes --> if we trade etfs; 1 unit = 1 etf
+                        risk_amt = self.capital * self.risk
+                        dist_to_sl = abs(strat_limit - strat_sl)
+                        
+                        if dist_to_sl > 0:
+                            new_units = risk_amt / dist_to_sl
+                        else:
+                            new_units = 0
+                        
+                        # update position
+                        self.position = 1
+                        self.units = new_units
+                        self.entry_price = strat_limit
+                        self.entry_date = current_date
+                        self.sl_price = strat_sl
+
+
+            # update equity curve
+            floating_pnl = 0.0
+            if self.position == 1:
+                floating_pnl = (today_close - self.entry_price) * self.units
+            total_equity = self.capital + floating_pnl
+            
+            # log everything
+            self.equity_curve.append(total_equity)
+            self.realized_curve.append(self.capital)
+            self.datetime_ls.append(current_date)
+            self.position_ls.append(self.position)
+            self.close_ls.append(today_close)
+            self.units_ls.append(self.units)
+
+        # print final net worth
+        print(f"Final capital: {self.equity_curve[-1]:.2f}")
+        
+        self.equity_df = pd.DataFrame({
+            "equity": self.equity_curve,
+            "equity_norm": np.array(self.equity_curve) / self.equity_curve[0],
+            "realized_equity": np.array(self.realized_curve),
+            "realized_equity_norm": np.array(self.realized_curve) / self.realized_curve[0],
+            "close": np.array(self.close_ls),
+            "close_norm": np.array(self.close_ls) / self.close_ls[0],
+            "position": self.position_ls,
+            "units": self.units_ls,
+        }, index=self.datetime_ls)
+        return self.equity_df
+
+
 
     def calc_performance_stats(self):
             df = self.equity_df.copy()
