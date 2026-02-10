@@ -25,6 +25,7 @@ class BacktestEngine:
         
         # initialize
         self.capital = capital
+        self.capital_init = capital
         self.risk = risk
         self.position = 0
         self.entry_price = 0.0
@@ -241,6 +242,7 @@ class BacktestEngine:
         
         # initialize
         self.capital = capital
+        self.capital_init = capital
         self.risk = risk
         self.position = 0
         self.entry_price = 0.0
@@ -741,7 +743,7 @@ class BacktestEngine:
         # define layout
         is_date = type(sim_df.index) == pd.DatetimeIndex
         xaxis = "Date" if is_date else "Trade Count"
-        title = "Monte Carlo Simulation " + ("(Significance of edge via Monkey trader)" if is_date else "(Risk of ruin via shuffled returns)")
+        title = "Monte Carlo Simulation " + ("" if is_date else "(Risk of ruin via shuffled returns)")
         fig.update_layout(
             title=title,
             xaxis_title=xaxis,
@@ -754,7 +756,7 @@ class BacktestEngine:
         fig.show()
     
 
-    def test_overfit(self, backtest_type = "etf", simulations=100, augmentation_size=0.2):
+    def test_overfit(self, backtest_type = "etf", simulations=100, augmentation_size=0.2, normalized=True):
         """
         This function aims to provide some feedback on whether a given strategy is overfit or reasonable in terms of 
         parameters. The idea is the following: all arguments of the strategy are augmented by the augment argument (default is 20%).
@@ -768,9 +770,9 @@ class BacktestEngine:
         # run the original strategy
         original_strategy = self.strategy
         if backtest_type == "etf":
-            original_df = self.run_etf(self.capital, self.risk)
+            original_df = self.run_etf(self.capital_init, self.risk)
         elif backtest_type == "future":
-            original_df = self.run_future(self.capital, self.risk)
+            original_df = self.run_future(self.capital_init, self.risk)
 
         # get the strategy object, determine the parameter space and augment
         base_args = self.strategy.argument_d
@@ -814,19 +816,19 @@ class BacktestEngine:
             
             # run the new strategy
             if backtest_type == "etf":
-                sim_df = new_backest_instance.run_etf(self.capital, self.risk)
+                sim_df = new_backest_instance.run_etf(self.capital_init, self.risk)
             elif backtest_type == "future":
-                sim_df = new_backest_instance.run_future(self.capital, self.risk)
+                sim_df = new_backest_instance.run_future(self.capital_init, self.risk)
             
             # store the results
-            result_s = sim_df.loc[:, "equity"]
-            result_s = result_s / result_s.iloc[0]
-            result_df = pd.DataFrame(result_s).rename({"equity": f"sim_{i}"}, axis=1)
+            result_df = pd.DataFrame(sim_df.loc[:, "equity"]).rename({"equity": f"sim_{i}"}, axis=1)
             all_sim_curves.append(result_df)
         
 
         # put everything together --> important, different strategies might have different amounts of 
         # datapoints due to different period lengths that introduce nan's.
-        all_sim_curves.append(pd.DataFrame(original_df.loc[:, "equity_norm"]).rename({"equity_norm": f"actual"}, axis=1))
+        all_sim_curves.append(pd.DataFrame(original_df.loc[:, "equity"]).rename({"equity": f"actual"}, axis=1))
         sim_df = pd.concat(all_sim_curves, axis=1)
+        if normalized:
+            sim_df = sim_df / self.capital_init
         return sim_df

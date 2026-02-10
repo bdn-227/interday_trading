@@ -40,7 +40,7 @@ print(equity_curve)
 backtest.plot_equity_df(normalize=True, log_axis=False)
 
 # test if the strategy overfits
-simulations = backtest.test_overfit(backtest_type = "etf", simulations=100, augmentation_size=0.2)
+simulations = backtest.test_overfit(backtest_type = "etf", simulations=100, augmentation_size=0.2, normalized=False)
 backtest.plot_simulations(simulations)
 
 # perform monte carlo
