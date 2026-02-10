@@ -753,7 +753,7 @@ class BacktestEngine:
         fig.show()
     
 
-    def test_overfit(simualations=100, augment=0.2):
+    def test_overfit(self, simualations=100, augmentation_size=0.2):
         """
         This function aims to provide some feedback on whether a given strategy is overfit or reasonable in terms of 
         parameters. The idea is the following: all arguments of the strategy are augmented by the augment argument (default is 20%).
@@ -765,4 +765,4 @@ class BacktestEngine:
         """
 
         # get the strategy object, determine the parameter space and augment
-        self.strategy
+        default_args = self.strategy.argument_d

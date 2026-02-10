@@ -33,6 +33,13 @@ class Strategy(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_arguments(self):
+        """
+        This method returns a dict with the keys as arguments for the __init__ as well as the corresponding types
+        """
+        pass
+
 
 class EmaCrossoverStrategy(Strategy):
 
@@ -43,10 +50,7 @@ class EmaCrossoverStrategy(Strategy):
         self.ema_long = ema_long
         self.length_atr = length_atr
         self.atr_multiplier = atr_multiplier
-        self.argument_d = {"ema_short": self.ema_short,
-                           "ema_long": self.ema_long,
-                           "length_atr": self.length_atr,
-                           "atr_multiplier": self.atr_multiplier,}
+        self.argument_d = self.get_arguments()
 
         # actual execution
         self.sl_price = None
@@ -54,12 +58,21 @@ class EmaCrossoverStrategy(Strategy):
         self.prev_ema_l = None
         self.limit_price = None
 
-        # validate the strategy
+        # validate the strategy --> a bit confusion, but check_constraints returns true if everything is fine; hence we raise an error 
+        # if NOT check_constraints
         if not self.check_constraints(ema_short=self.ema_short, 
                                       ema_long=self.ema_long, 
                                       length_atr=self.length_atr, 
                                       atr_multiplier=self.atr_multiplier):
             raise ValueError("Some parameters do not meet the strategy requirements")
+
+
+    def get_arguments(self):
+        arguments_d = {"ema_short": [self.ema_short, int],
+                       "ema_long": [self.ema_long, int],
+                       "length_atr": [self.length_atr, int],
+                       "atr_multiplier": [self.atr_multiplier, float]}
+        return arguments_d
 
 
     def get_indicators(self):
