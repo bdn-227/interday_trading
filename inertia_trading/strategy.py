@@ -40,12 +40,21 @@ class Strategy(ABC):
         """
         pass
 
-    @abstractmethod
-    def calc_indicators(self):
+    def calc_indicators(self, market_data):
         """
-        This method returns a dict with the keys as arguments for the __init__ as well as the corresponding types
+        This method accepts a instance of the MarketData class and adds the indictors to the dataframe. 
+        
+        :param market_data: a MarketData class instance. missing columns will be calculated
         """
-        pass
+
+        # add the indicators
+        required_indicators = self.get_indicators()
+        for indicator in required_indicators:
+            if indicator not in market_data.df.columns:
+                if indicator.split(".")[0] == "ema":
+                    market_data.add_ema(length=int(indicator.split(".")[2]), column=indicator.split(".")[1])
+                elif indicator.split(".")[0] == "atr":
+                     market_data.add_atr(int(indicator.split(".")[-1]))
 
 
 class EmaCrossoverStrategy(Strategy):
@@ -73,24 +82,6 @@ class EmaCrossoverStrategy(Strategy):
                                       atr_multiplier=self.atr_multiplier):
             raise ValueError("Some parameters do not meet the strategy requirements")
 
-
-    def calc_indicators(self, market_data):
-        """
-        This method accepts a instance of the MarketData class and adds the indictors to the dataframe. This method is
-        basically garbage, as it does not check for the existance of the respective column. this should be included.
-        
-        :param self: Description
-        :param market_data: Description
-        """
-
-        # add the indicators
-        required_indicators = self.get_indicators()
-        for indicator in required_indicators:
-            if indicator not in market_data.df.columns:
-                if indicator.split(".")[0] == "ema":
-                    market_data.add_ema(length=int(indicator.split(".")[2]), column=indicator.split(".")[1])
-                elif indicator.split(".")[0] == "atr":
-                     market_data.add_atr(int(indicator.split(".")[-1]))
 
 
     def get_arguments(self):

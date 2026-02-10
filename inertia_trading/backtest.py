@@ -812,15 +812,9 @@ class BacktestEngine:
             new_strategy_instance.calc_indicators(self.data)
 
             
-            # C. Inject into Backtester & Run
-            self.strategy = new_strategy_instance
             
-            # Run silently (you might want to comment out print statements in run_etf)
-            sim_df = self.run_etf(self.capital, self.risk)
+            # run the new strategy
+            sim_df = new_strategy_instance.run_etf(self.capital, self.risk)
             
             # Store results
             sim_curves.append(sim_df['equity'])
-            final_equities.append(sim_df['equity'].iloc[-1])
-
-        # 3. Restore Original Strategy
-        self.strategy = original_strategy
