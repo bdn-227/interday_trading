@@ -75,11 +75,22 @@ class EmaCrossoverStrategy(Strategy):
 
 
     def calc_indicators(self, market_data):
+        """
+        This method accepts a instance of the MarketData class and adds the indictors to the dataframe. This method is
+        basically garbage, as it does not check for the existance of the respective column. this should be included.
         
+        :param self: Description
+        :param market_data: Description
+        """
+
         # add the indicators
-        market_data.add_ema(self.ema_short)
-        market_data.add_ema(self.ema_long)
-        market_data.add_atr(self.length_atr)
+        required_indicators = self.get_indicators()
+        for indicator in required_indicators:
+            if indicator not in market_data.df.columns:
+                if indicator.split(".")[0] == "ema":
+                    market_data.add_ema(length=int(indicator.split(".")[2]), column=indicator.split(".")[1])
+                elif indicator.split(".")[0] == "atr":
+                     market_data.add_atr(int(indicator.split(".")[-1]))
 
 
     def get_arguments(self):

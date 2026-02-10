@@ -778,6 +778,7 @@ class BacktestEngine:
         # list to store the results
         sim_curves = []
 
+
         # perform the simulations
         for i in range(simulations):
             
@@ -804,14 +805,12 @@ class BacktestEngine:
             
 
             # create a new instance of the strategy class and run the backtest
-            StrategyClass = original_strategy.__class__
-            new_strategy_instance = StrategyClass(**augmented_params)
+            strategy_class = original_strategy.__class__
+            new_strategy_instance = strategy_class(**augmented_params)
 
+            # add the required indicators to the market data --> this is super badly implemented
+            new_strategy_instance.calc_indicators(self.data)
 
-            # create a new instance of the market data that contains the required indicators
-
-
-            # save the results
             
             # C. Inject into Backtester & Run
             self.strategy = new_strategy_instance
