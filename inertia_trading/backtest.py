@@ -753,7 +753,7 @@ class BacktestEngine:
         fig.show()
     
 
-    def test_overfit(self, simualations=100, augmentation_size=0.2):
+    def test_overfit(self, backtest_type = "etf", simulations=100, augmentation_size=0.2):
         """
         This function aims to provide some feedback on whether a given strategy is overfit or reasonable in terms of 
         parameters. The idea is the following: all arguments of the strategy are augmented by the augment argument (default is 20%).
@@ -764,5 +764,64 @@ class BacktestEngine:
         assume that our strategy as been overfitted. All parameters are augmented at once. general logic of the strategies will be preserved.
         """
 
+        # run the original strategy
+        original_strategy = self.strategy
+        if backtest_type == "etf":
+            original_df = self.run_etf(self.capital, self.risk)
+        elif backtest_type == "future":
+            original_df = self.run_future(self.capital, self.risk)
+        original_curve = original_df['equity']
+
         # get the strategy object, determine the parameter space and augment
-        default_args = self.strategy.argument_d
+        base_args = self.strategy.argument_d
+
+        # list to store the results
+        sim_curves = []
+
+        # perform the simulations
+        for i in range(simulations):
+            
+            # create a dict for the augmented variables
+            augmented_params = {}
+            
+            # populate the augmented dictionary
+            for param_name, specs in base_args.items():
+                original_val = specs[0]
+                param_type = specs[1]
+                
+                # generate the new values
+                factor = random.uniform(1 - augmentation_size, 1 + augmentation_size)
+                new_val = original_val * factor
+                
+                # enforce the correct types
+                if param_type is int:
+                    new_val = int(round(new_val))
+                elif param_type is float:
+                    new_val = float(new_val)
+                
+                # populate the dict
+                augmented_params[param_name] = new_val
+            
+
+            # create a new instance of the strategy class and run the backtest
+            StrategyClass = original_strategy.__class__
+            new_strategy_instance = StrategyClass(**augmented_params)
+
+
+            # create a new instance of the market data that contains the required indicators
+
+
+            # save the results
+            
+            # C. Inject into Backtester & Run
+            self.strategy = new_strategy_instance
+            
+            # Run silently (you might want to comment out print statements in run_etf)
+            sim_df = self.run_etf(self.capital, self.risk)
+            
+            # Store results
+            sim_curves.append(sim_df['equity'])
+            final_equities.append(sim_df['equity'].iloc[-1])
+
+        # 3. Restore Original Strategy
+        self.strategy = original_strategy

@@ -40,6 +40,13 @@ class Strategy(ABC):
         """
         pass
 
+    @abstractmethod
+    def calc_indicators(self):
+        """
+        This method returns a dict with the keys as arguments for the __init__ as well as the corresponding types
+        """
+        pass
+
 
 class EmaCrossoverStrategy(Strategy):
 
@@ -65,6 +72,14 @@ class EmaCrossoverStrategy(Strategy):
                                       length_atr=self.length_atr, 
                                       atr_multiplier=self.atr_multiplier):
             raise ValueError("Some parameters do not meet the strategy requirements")
+
+
+    def calc_indicators(self, market_data):
+        
+        # add the indicators
+        market_data.add_ema(self.ema_short)
+        market_data.add_ema(self.ema_long)
+        market_data.add_atr(self.length_atr)
 
 
     def get_arguments(self):
