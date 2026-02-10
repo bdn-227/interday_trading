@@ -39,10 +39,14 @@ equity_curve = backtest.run_etf(risk=0.01, capital=1000)
 print(equity_curve)
 backtest.plot_equity_df(normalize=True, log_axis=False)
 
-# perform monte carlo
-simulations = backtest.monte_carlo(n_simulations=n_simulations*10, drawdown=0.5)
+# test if the strategy overfits
+simulations = backtest.test_overfit(backtest_type = "etf", simulations=100, augmentation_size=0.2)
 backtest.plot_simulations(simulations)
 
+# perform monte carlo
+#simulations = backtest.monte_carlo(n_simulations=n_simulations*10, drawdown=0.5)
+#backtest.plot_simulations(simulations)
+
 # perform the random monkey
-simulations = backtest.monkey_carlo(n_simulations=n_simulations)
-backtest.plot_simulations(simulations)
+#simulations = backtest.monkey_carlo(n_simulations=n_simulations)
+#backtest.plot_simulations(simulations)

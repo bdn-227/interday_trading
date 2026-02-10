@@ -771,7 +771,6 @@ class BacktestEngine:
             original_df = self.run_etf(self.capital, self.risk)
         elif backtest_type == "future":
             original_df = self.run_future(self.capital, self.risk)
-        original_curve = original_df['equity']
 
         # get the strategy object, determine the parameter space and augment
         base_args = self.strategy.argument_d
@@ -811,20 +810,23 @@ class BacktestEngine:
             # add the required indicators to the market data --> should be better now.
             # However, depending how many simulations will be made in the future, this could be further optimized
             new_strategy_instance.calc_indicators(self.market_data)
+            new_backest_instance = BacktestEngine(self.market_data, new_strategy_instance)
             
             # run the new strategy
             if backtest_type == "etf":
-                sim_df = new_strategy_instance.run_etf(self.capital, self.risk)
+                sim_df = new_backest_instance.run_etf(self.capital, self.risk)
             elif backtest_type == "future":
-                sim_df = new_strategy_instance.run_future(self.capital, self.risk)
+                sim_df = new_backest_instance.run_future(self.capital, self.risk)
             
             # store the results
-            result_df = sim_df.loc[:, "equity"].rename({"equity": f"sim_{i}"}, axis=1)
+            result_s = sim_df.loc[:, "equity"]
+            result_s = result_s / result_s.iloc[0]
+            result_df = pd.DataFrame(result_s).rename({"equity": f"sim_{i}"}, axis=1)
             all_sim_curves.append(result_df)
         
 
         # put everything together --> important, different strategies might have different amounts of 
         # datapoints due to different period lengths that introduce nan's.
-        all_sim_curves.append(original_df.loc[:, "equity"].rename({"equity": f"actual"}, axis=1))
+        all_sim_curves.append(pd.DataFrame(original_df.loc[:, "equity_norm"]).rename({"equity_norm": f"actual"}, axis=1))
         sim_df = pd.concat(all_sim_curves, axis=1)
         return sim_df

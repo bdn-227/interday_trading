@@ -24,7 +24,7 @@ class Strategy(ABC):
         pass
 
     @abstractmethod
-    def get_constraints(self):
+    def check_constraints(self):
         """
         This method returns the constrains that apply to the respective strategy. For instance, in a trend following strategy,
         the short term moving average should always be larger than the long-term moving average. This method is designed to test these constraints.
