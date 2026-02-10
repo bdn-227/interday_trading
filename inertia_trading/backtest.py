@@ -763,3 +763,6 @@ class BacktestEngine:
         strategy falls within the mean +/- 1*std of these augmented runs. if the strategy lays far out this, i.e., mean + 2.5*std, we can safely
         assume that our strategy as been overfitted. All parameters are augmented at once. general logic of the strategies will be preserved.
         """
+
+        # get the strategy object, determine the parameter space and augment
+        self.strategy

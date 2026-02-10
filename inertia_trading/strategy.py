@@ -37,19 +37,36 @@ class Strategy(ABC):
 class EmaCrossoverStrategy(Strategy):
 
     def __init__(self, ema_short=50, ema_long=100, length_atr=14, atr_multiplier=3):
+        
+        # save parameters
         self.ema_short = ema_short
         self.ema_long = ema_long
         self.length_atr = length_atr
-        self.atr_mult = atr_multiplier
+        self.atr_multiplier = atr_multiplier
+        self.argument_d = {"ema_short": self.ema_short,
+                           "ema_long": self.ema_long,
+                           "length_atr": self.length_atr,
+                           "atr_multiplier": self.atr_multiplier,}
+
+        # actual execution
         self.sl_price = None
         self.prev_ema_s = None
         self.prev_ema_l = None
         self.limit_price = None
 
+        # validate the strategy
+        if not self.check_constraints(ema_short=self.ema_short, 
+                                      ema_long=self.ema_long, 
+                                      length_atr=self.length_atr, 
+                                      atr_multiplier=self.atr_multiplier):
+            raise ValueError("Some parameters do not meet the strategy requirements")
+
+
     def get_indicators(self):
         return [f"ema.close.{self.ema_short}", f"ema.close.{self.ema_long}", f'atr.{self.length_atr}']
     
-    def get_constraints(self, ema_short, ema_long, length_atr):
+
+    def check_constraints(self, ema_short, ema_long, length_atr, atr_multiplier):
         """
         This method tests, if the given strategy is correctly parameterized. It returns true if all necessary conditions are met.
         If this is not the case, a false is returned
@@ -58,14 +75,15 @@ class EmaCrossoverStrategy(Strategy):
         :param ema_long: long moving average period parameter to be tested
         :param length_atr: atr period length to be tested
         """
-        
+
         # now, test all necessary conditions
         ema_correct = ema_short < ema_long
         ema_length = (ema_short > 1) and (ema_long > 1)
         atr_length = length_atr > 1
+        atr_mult = atr_multiplier > 0
         
         # now return the test results
-        return ema_correct and ema_length and atr_length
+        return ema_correct and ema_length and atr_length and atr_mult
 
 
     def on_bar(self, row, current_position):
@@ -90,14 +108,14 @@ class EmaCrossoverStrategy(Strategy):
         # go long
         if ema_s > ema_l and was_crossover:
             target_state = 1
-            self.sl_price = close - (self.atr_mult * atr)
+            self.sl_price = close - (self.atr_multiplier * atr)
             self.limit_price = close - (atr * 0.5)
 
 
         # go short
         elif ema_s < ema_l and was_crossover:
             target_state = -1
-            self.sl_price = close + (self.atr_mult * atr)
+            self.sl_price = close + (self.atr_multiplier * atr)
             self.limit_price = close + (atr * 0.5)
         
 
@@ -108,7 +126,7 @@ class EmaCrossoverStrategy(Strategy):
                 self.limit_price = close + (atr * 0.5)
             
             else:
-                new_sl = close - (self.atr_mult * atr)
+                new_sl = close - (self.atr_multiplier * atr)
                 if new_sl > self.sl_price:
                     self.sl_price = new_sl
 
@@ -120,7 +138,7 @@ class EmaCrossoverStrategy(Strategy):
                 self.limit_price = close - (atr * 0.5)
 
             else:
-                new_sl = close + (self.atr_mult * atr)
+                new_sl = close + (self.atr_multiplier * atr)
                 if new_sl < self.sl_price:
                     self.sl_price = new_sl
         
