@@ -40,6 +40,7 @@ class Strategy(ABC):
         """
         pass
 
+
     def calc_indicators(self, market_data):
         """
         This method accepts a instance of the MarketData class and adds the indictors to the dataframe. 

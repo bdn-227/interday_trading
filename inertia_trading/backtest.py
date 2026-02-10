@@ -9,8 +9,9 @@ import math
 
 class BacktestEngine:
     def __init__(self, market_data_obj, strategy_obj):
-        self.data = market_data_obj.df
+        self.market_data = market_data_obj
         self.strategy = strategy_obj
+        self.data = market_data_obj.df
         self.required_indicators = strategy_obj.get_indicators()
         self.position = 0
         self.equity_curve = []
@@ -775,9 +776,8 @@ class BacktestEngine:
         # get the strategy object, determine the parameter space and augment
         base_args = self.strategy.argument_d
 
-        # list to store the results
-        sim_curves = []
-
+        # dict to store the results
+        all_sim_curves = []
 
         # perform the simulations
         for i in range(simulations):
@@ -808,13 +808,23 @@ class BacktestEngine:
             strategy_class = original_strategy.__class__
             new_strategy_instance = strategy_class(**augmented_params)
 
-            # add the required indicators to the market data --> this is super badly implemented
-            new_strategy_instance.calc_indicators(self.data)
-
-            
+            # add the required indicators to the market data --> should be better now.
+            # However, depending how many simulations will be made in the future, this could be further optimized
+            new_strategy_instance.calc_indicators(self.market_data)
             
             # run the new strategy
-            sim_df = new_strategy_instance.run_etf(self.capital, self.risk)
+            if backtest_type == "etf":
+                sim_df = new_strategy_instance.run_etf(self.capital, self.risk)
+            elif backtest_type == "future":
+                sim_df = new_strategy_instance.run_future(self.capital, self.risk)
             
-            # Store results
-            sim_curves.append(sim_df['equity'])
+            # store the results
+            result_df = sim_df.loc[:, "equity"].rename({"equity": f"sim_{i}"}, axis=1)
+            all_sim_curves.append(result_df)
+        
+
+        # put everything together --> important, different strategies might have different amounts of 
+        # datapoints due to different period lengths that introduce nan's.
+        all_sim_curves.append(original_df.loc[:, "equity"].rename({"equity": f"actual"}, axis=1))
+        sim_df = pd.concat(all_sim_curves, axis=1)
+        return sim_df
