@@ -14,9 +14,7 @@ Included:
 
 ## TODO
 - implement a class for live trading (paper and real money)
-- some code hygene to ensure there is not look ahead bias etc.
 - account for slipage better
 - compare the suggested trading volume to the actual trading volume
-- make sure backtest stops upon a 100% drawdown
 - cap maximum number of draw downs --> no more than 100%
 - add a new backtest method for etfs: --> long only and intraday volatility does not kill us

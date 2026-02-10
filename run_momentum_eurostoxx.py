@@ -41,8 +41,8 @@ backtest.plot_equity_df(normalize=True, log_axis=False)
 
 # perform monte carlo
 simulations = backtest.monte_carlo(n_simulations=n_simulations*10, drawdown=0.5)
-backtest.plot_monte_carlo(simulations)
+backtest.plot_simulations(simulations)
 
 # perform the random monkey
 simulations = backtest.monkey_carlo(n_simulations=n_simulations)
-backtest.plot_monte_carlo(simulations)
+backtest.plot_simulations(simulations)

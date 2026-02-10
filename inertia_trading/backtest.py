@@ -670,10 +670,10 @@ class BacktestEngine:
         return sim_df
 
 
-    def plot_monte_carlo(self, sim_df, quantile=(0.75, 0.95, 0.99)):
+    def plot_simulations(self, sim_df, quantile=(0.75, 0.95, 0.99)):
         
         # calculate statistics
-        mc_mean = sim_df.mean(axis=1)
+        mc_mean = sim_df.median(axis=1)
 
         # calculate the quantiles
         quantile_n = [e for e in quantile] + [1-e for e in quantile]
@@ -751,3 +751,15 @@ class BacktestEngine:
         )
         
         fig.show()
+    
+
+    def test_overfit(simualations=100, augment=0.2):
+        """
+        This function aims to provide some feedback on whether a given strategy is overfit or reasonable in terms of 
+        parameters. The idea is the following: all arguments of the strategy are augmented by the augment argument (default is 20%).
+        For instance, a momentun strategy that uses a 100 day moving average might have random values ranging from 80 to 120. This is done with all
+        arguments for the strategy class for a certain number of times ('simulations' parameter). To the end of this, the actual strategy will
+        be plotted against all these augmented simulations. If the strategy is reasonably parameterized, we expect that the actual
+        strategy falls within the mean +/- 1*std of these augmented runs. if the strategy lays far out this, i.e., mean + 2.5*std, we can safely
+        assume that our strategy as been overfitted. All parameters are augmented at once. general logic of the strategies will be preserved.
+        """

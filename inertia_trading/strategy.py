@@ -23,6 +23,16 @@ class Strategy(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_constraints(self):
+        """
+        This method returns the constrains that apply to the respective strategy. For instance, in a trend following strategy,
+        the short term moving average should always be larger than the long-term moving average. This method is designed to test these constraints.
+        However, it does not test these during inference, as the user is expected to know the assumed data inputs of the model.
+        It is rather designed to ensure parameter-stability and overfitting.
+        """
+        pass
+
 
 class EmaCrossoverStrategy(Strategy):
 
@@ -35,11 +45,27 @@ class EmaCrossoverStrategy(Strategy):
         self.prev_ema_s = None
         self.prev_ema_l = None
         self.limit_price = None
-        
-    
 
     def get_indicators(self):
         return [f"ema.close.{self.ema_short}", f"ema.close.{self.ema_long}", f'atr.{self.length_atr}']
+    
+    def get_constraints(self, ema_short, ema_long, length_atr):
+        """
+        This method tests, if the given strategy is correctly parameterized. It returns true if all necessary conditions are met.
+        If this is not the case, a false is returned
+        
+        :param ema_short: short moving average period parameter to be tested
+        :param ema_long: long moving average period parameter to be tested
+        :param length_atr: atr period length to be tested
+        """
+        
+        # now, test all necessary conditions
+        ema_correct = ema_short < ema_long
+        ema_length = (ema_short > 1) and (ema_long > 1)
+        atr_length = length_atr > 1
+        
+        # now return the test results
+        return ema_correct and ema_length and atr_length
 
 
     def on_bar(self, row, current_position):
