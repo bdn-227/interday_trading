@@ -13,8 +13,8 @@ Included:
 - backtesting engine for backtest, monte carlo simulations and plotting
 
 ## TODO
-- implement a class for live trading (paper and real money)
-- account for slipage better
-- compare the suggested trading volume to the actual trading volume
-- cap maximum number of draw downs --> no more than 100%
--
+-[] implement a class for live trading (paper and real money)
+-[] account for slipage better
+-[] compare the suggested trading volume to the actual trading volume
+-[] cap maximum number of draw downs --> no more than 100%
+-[] adjust the market_data class and the backtest class to also handle intraday trading strategies.
