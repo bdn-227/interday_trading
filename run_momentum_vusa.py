@@ -16,12 +16,12 @@ from inertia_trading import MarketData, EmaCrossoverStrategy, BacktestEngine
 
 
 # load the data and convert to class
-price_data = MarketData(data_in={"contract_type": "Stock", "symbol": "VUSA"}, market="XFRA")
-price_data.write_df("data/vusa")
+csv = pd.read_csv("data/vusa.csv")
+price_data = MarketData(csv, market="XFRA")
 
 # parameters
-ema_short = 20
-ema_long = 50
+ema_short = 50
+ema_long = 200
 atr_length = 14
 atr_multiplier = 3
 n_simulations = 100
