@@ -8,7 +8,7 @@ from ib_insync import util, IB, Forex, Index, Stock
 
 
 class MarketData:
-    def __init__(self, data_in, market = "XFRA"):
+    def __init__(self, data_in, market = "XFRA", durationStr='50 Y', barSizeSetting='1 day'):
         """
         Expects a DataFrame with 'open', 'high', 'low', 'close' columns.
         """
@@ -23,7 +23,7 @@ class MarketData:
                 data_in["currency"] = "EUR"
             if "exchange" not in data_in.keys():
                 data_in["exchange"] = "SMART"
-            self.df = self.download_marketdata(data_in["contract_type"], data_in["symbol"], data_in["exchange"], data_in["currency"])
+            self.df = self.download_marketdata(data_in["contract_type"], data_in["symbol"], data_in["exchange"], data_in["currency"], durationStr, barSizeSetting)
         
         # exit condition
         if self.df is None:
@@ -69,7 +69,7 @@ class MarketData:
             return self
 
 
-    def download_marketdata(self, contract_type, symbol, exchange, currency):
+    def download_marketdata(self, contract_type, symbol, exchange, currency, durationStr, barSizeSetting):
 
         # initiate
         util.startLoop() 
@@ -104,8 +104,8 @@ class MarketData:
         bars = ib.reqHistoricalData(
             contract,
             endDateTime='',
-            durationStr='50 Y',
-            barSizeSetting='1 day',
+            durationStr=durationStr,
+            barSizeSetting=barSizeSetting,
             whatToShow=whatToShow,
             useRTH=True,
             formatDate=1
