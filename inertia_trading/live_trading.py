@@ -2,50 +2,37 @@ from ib_insync import *
 import pandas as pd
 
 class LiveIBKREngine:
-    def __init__(self, ib_instance, market_data, strategy, symbol='EUR', multiplier=1):
-        self.ib = ib_instance
-        self.market_data = market_data
+    def __init__(self, strategy, contract=Stock(symbol="VUSA", exchange="AEB", currency="EUR")):
         self.strategy = strategy
-        self.multiplier = multiplier
-        self.contract = Future('M6E', 'GLOBEX', 'USD')
-        self.ib.qualifyContracts(self.contract)
-        self.bars = self.ib.reqRealTimeBars(self.contract, 5, 'MIDPOINT', False)
-        self.bars.updateEvent += self.on_bar_update
+        self.contract = contract
+    
+
+    def get_ib_isntance():
+        pass
 
 
-    def on_bar_update(self, bars, has_new_bar):
-        if not has_new_bar:
-            return
-        latest_df = util.df(bars)
-        processed_data = self.market_data.add_indicators(latest_df)
-        last_row = processed_data.iloc[-1]
-        pos_size = self.get_current_position()
-        action, sl_price = self.strategy.on_bar(last_row, pos_size)
-        if action != "HOLD":
-            self.execute_trade(action)
+    def get_markget_data():
+        pass
 
 
-    def get_current_position(self):
-        positions = self.ib.positions()
-        for p in positions:
-            if p.contract.conId == self.contract.conId:
-                return p.position
-        return 0
+    def run():
+        
+        # 1. connect to IB gateway
 
+        # 2. clean-up: cancel all open orders from yesterday (especially buy orders)
 
-    def execute_trade(self, action):
-        pos = self.get_current_position()
-        if action == "BUY" and pos <= 0:
-            quantity = self.multiplier if pos == 0 else self.multiplier * 2
-            order = MarketOrder('BUY', quantity)
-            self.ib.placeOrder(self.contract, order)
-            
-        elif action == "SELL" and pos >= 0:
-            quantity = self.multiplier if pos == 0 else self.multiplier * 2
-            order = MarketOrder('SELL', quantity)
-            self.ib.placeOrder(self.contract, order)
-            
-        elif action == "EXIT" and pos != 0:
-            side = 'SELL' if pos > 0 else 'BUY'
-            order = MarketOrder(side, abs(pos))
-            self.ib.placeOrder(self.contract, order)
+        # 3. get account state (portfolio, positions, net worth)
+
+        # 4. fetch data and calculate indicators
+
+        # 5. calculate signals using the strategy
+
+        # 6. execute the signals: exits first, new buys etc.
+
+        # 7. log results (trade log if trades happened/were scheduled; log trades what were submitted; target state; portfolio, cash balance, positions, equity curve)
+            # status.json --> override daily, current positions, cash, worth, active 
+            # equity.csv --> Date, NetLiquidity
+            # trades.csv --> Date, Symbol, Action, Price, PnL
+        
+        pass
+
