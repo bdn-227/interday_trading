@@ -675,7 +675,7 @@ class BacktestEngine:
         return sim_df
 
 
-    def plot_simulations(self, sim_df, quantile=(0.75, 0.95, 0.99)):
+    def plot_simulations(self, sim_df, quantile=(0.75, 0.95, 0.99), title="Monte Carlo Simulations"):
         
         # calculate statistics
         mc_mean = sim_df.median(axis=1)
@@ -746,11 +746,10 @@ class BacktestEngine:
         # define layout
         is_date = type(sim_df.index) == pd.DatetimeIndex
         xaxis = "Date" if is_date else "Trade Count"
-        title = "Monte Carlo Simulation " + ("" if is_date else "(Risk of ruin via shuffled returns)")
         fig.update_layout(
             title=title,
             xaxis_title=xaxis,
-            yaxis_title="Equity Multiple (Starting at 1.0)",
+            yaxis_title="Equity",
             template="simple_white",
             width=1200,
             height=900,

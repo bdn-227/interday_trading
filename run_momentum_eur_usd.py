@@ -41,13 +41,13 @@ backtest.plot_equity_df(normalize=True, log_axis=False)
 
 # perform monte carlo
 simulations = backtest.monte_carlo(n_simulations=n_simulations*10, drawdown=0.5)
-backtest.plot_simulations(simulations)
+backtest.plot_simulations(simulations, title="Monte Carlo (Risk of Ruin)")
 
 # perform the random monkey
 simulations = backtest.monkey_carlo(n_simulations=n_simulations)
-backtest.plot_simulations(simulations)
+backtest.plot_simulations(simulations, title="Monte Carlo (Statistical significance of the trading parameters)")
 
 # model sensitivity test
 simulations = backtest.test_overfit(backtest_type = "future", simulations=100, augmentation_size=0.2, normalized=True)
-backtest.plot_simulations(simulations)
+backtest.plot_simulations(simulations, title="Parameter Sensitivity Test")
 

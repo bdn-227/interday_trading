@@ -1,8 +1,8 @@
 # Inter day trading
 This repository contains some bundled classes that should help with the development and testing of different trading strategies.
-As of now, the logic handles only future contracts and not individual stocks.
-As backtesting using stocks always introduces a survivor-bias, i will stick with futures for now..
-All i need is a GmbH.
+As of now, the logic handles only future contracts and etfs (long only).
+As backtesting using stocks always introduces a survivor-bias, i decided for this index-based approach, eliminating the danger of backtesting on a 
+dataset that is full of survivors that we could have not predictd 20 years ago.
 The general assumption as of now is that the trading descision is based on the close.
 Hence, this system is supposed to be executed after the market close to issue orders that should be filled at the market open.
 Intraday volatility is not accounted for. Consequently, no automatic stop-losses should be added via the brooker. 
