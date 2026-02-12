@@ -17,7 +17,7 @@ class BacktestEngine:
         self.equity_curve = []
 
 
-    def run_future(self, capital=1_000, risk=0.01):
+    def run_future(self, capital=1_000, risk=0.01, trading_cost=0):
         """
         Backtesting method for futures. this features short, long and exits. sizing based in risk.
         """
@@ -27,6 +27,7 @@ class BacktestEngine:
         self.capital = capital
         self.capital_init = capital
         self.risk = risk
+        self.trading_cost = trading_cost
         self.position = 0
         self.entry_price = 0.0
         self.entry_date = None
@@ -81,7 +82,7 @@ class BacktestEngine:
                         'entry': self.entry_price, 
                         'exit': exit_price, 
                         'pnl': pnl, 
-                        'capital': self.capital,
+                        'capital': self.capital - (self.entry_price*self.trading_cost + exit_price*self.trading_cost),
                         'return': pnl_exit / (self.capital - pnl_exit),
                     })
                     
@@ -105,7 +106,7 @@ class BacktestEngine:
                         'entry': self.entry_price, 
                         'exit': exit_price, 
                         'pnl': pnl, 
-                        'capital': self.capital,
+                        'capital': self.capital - (self.entry_price*self.trading_cost + exit_price*self.trading_cost),
                         'return': pnl_exit / (self.capital - pnl_exit),
                     })
                     
@@ -141,7 +142,7 @@ class BacktestEngine:
                             'entry': self.entry_price, 
                             'exit': strat_limit, 
                             'pnl': pnl_exit, 
-                            'capital': self.capital,
+                            'capital': self.capital  - (self.entry_price*self.trading_cost + strat_limit*self.trading_cost),
                         'return': pnl_exit / (self.capital - pnl_exit),
                         })
                         self.position = 0
@@ -181,7 +182,7 @@ class BacktestEngine:
                                 'entry': strat_limit, 
                                 'exit': strat_sl, 
                                 'pnl': pnl_crash, 
-                                'capital': self.capital,
+                                'capital': self.capital - (strat_limit*self.trading_cost + strat_sl*self.trading_cost),
                                 'return': pnl_exit / (self.capital - pnl_exit),
                             })
 
@@ -231,7 +232,7 @@ class BacktestEngine:
         return self.equity_df
 
 
-    def run_etf(self, capital=1_000, risk=0.01):
+    def run_etf(self, capital=1_000, risk=0.01, trading_cost=0):
         """
         Backtesting method for ETFs (Long Only).
         - No intraday liquidations (Cash/Asset based).
@@ -243,6 +244,7 @@ class BacktestEngine:
         # initialize
         self.capital = capital
         self.capital_init = capital
+        self.trading_cost = trading_cost
         self.risk = risk
         self.position = 0
         self.entry_price = 0.0
@@ -300,7 +302,7 @@ class BacktestEngine:
                         'exit': exit_price, 
                         'pnl': pnl, 
                         'return': pnl / prev_capital,
-                        'capital': self.capital,
+                        'capital': self.capital - (self.entry_price*self.trading_cost + exit_price*self.trading_cost),
                     })
                     
                     # reset position
@@ -331,7 +333,7 @@ class BacktestEngine:
                             'exit': strat_limit, 
                             'pnl': pnl_exit, 
                             'return': pnl_exit / prev_capital,
-                            'capital': self.capital,
+                            'capital': self.capital - (self.entry_price*self.trading_cost + strat_limit*self.trading_cost),
                         })
                         
                         # reset positions
@@ -702,7 +704,7 @@ class BacktestEngine:
                     line=dict(color=color, width=1),
                     opacity=0.15,
                     showlegend=False,
-                    name=f"Sim {i}"
+                    name=col
                 ))
 
 
@@ -770,9 +772,9 @@ class BacktestEngine:
         # run the original strategy
         original_strategy = self.strategy
         if backtest_type == "etf":
-            original_df = self.run_etf(self.capital_init, self.risk)
+            original_df = self.run_etf(capital=self.capital_init, risk=self.risk, trading_cost=self.trading_cost)
         elif backtest_type == "future":
-            original_df = self.run_future(self.capital_init, self.risk)
+            original_df = self.run_future(capital=self.capital_init, risk=self.risk, trading_cost=self.trading_cost)
 
         # get the strategy object, determine the parameter space and augment
         base_args = self.strategy.argument_d
@@ -808,6 +810,7 @@ class BacktestEngine:
             # create a new instance of the strategy class and run the backtest
             strategy_class = original_strategy.__class__
             new_strategy_instance = strategy_class(**augmented_params)
+            strategy_name = "-".join(new_strategy_instance.get_indicators())
 
             # add the required indicators to the market data --> should be better now.
             # However, depending how many simulations will be made in the future, this could be further optimized
@@ -816,12 +819,12 @@ class BacktestEngine:
             
             # run the new strategy
             if backtest_type == "etf":
-                sim_df = new_backest_instance.run_etf(self.capital_init, self.risk)
+                sim_df = new_backest_instance.run_etf(capital=self.capital_init, risk=self.risk, trading_cost=self.trading_cost)
             elif backtest_type == "future":
-                sim_df = new_backest_instance.run_future(self.capital_init, self.risk)
+                sim_df = new_backest_instance.run_future(capital=self.capital_init, risk=self.risk, trading_cost=self.trading_cost)
             
             # store the results
-            result_df = pd.DataFrame(sim_df.loc[:, "equity"]).rename({"equity": f"sim_{i}"}, axis=1)
+            result_df = pd.DataFrame(sim_df.loc[:, "equity"]).rename({"equity": f"sim_{i}_{strategy_name}"}, axis=1)
             all_sim_curves.append(result_df)
         
 

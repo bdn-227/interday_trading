@@ -85,7 +85,7 @@ class LiveIBKREngine:
                     "realized_pnl": p.realizedPNL
                 }
                 for p in portfolio_items])
-        return portfolio_items
+        return df_portfolio
 
 
 

@@ -32,6 +32,7 @@ class MarketData:
         # processing
         self.format_df()
         self.check_integrity(market)
+        self.drop_duplicates()
         self.add_next(column="open", shift=1)
         self.add_next(column="low", shift=1)
         self.add_next(column="high", shift=1)
@@ -132,6 +133,11 @@ class MarketData:
 
     def write_df(self, filename):
         self.df.to_csv(f"{filename}.csv", index=False)
+    
+
+    def drop_duplicates(self):
+        self.df = self.df.sort_values(["symbol", "datetime"]).groupby("datetime", as_index=False).last().sort_values(["symbol", "datetime"])
+
     
 
     def check_integrity(self, market):

@@ -35,14 +35,19 @@ price_data.add_atr(length=atr_length)
 # backtest
 strategy = EmaCrossoverStrategy(ema_short=ema_short, ema_long=ema_long, length_atr=atr_length, atr_multiplier=atr_multiplier)
 backtest = BacktestEngine(price_data, strategy)
-equity_curve = backtest.run_future(risk=0.01, capital=1000)
+equity_curve = backtest.run_future(risk=0.01)
 print(equity_curve)
 backtest.plot_equity_df(normalize=True, log_axis=False)
 
 # perform monte carlo
 simulations = backtest.monte_carlo(n_simulations=n_simulations*10, drawdown=0.5)
-backtest.plot_monte_carlo(simulations)
+backtest.plot_simulations(simulations)
 
 # perform the random monkey
 simulations = backtest.monkey_carlo(n_simulations=n_simulations)
-backtest.plot_monte_carlo(simulations)
+backtest.plot_simulations(simulations)
+
+# model sensitivity test
+simulations = backtest.test_overfit(backtest_type = "future", simulations=100, augmentation_size=0.2, normalized=False)
+backtest.plot_simulations(simulations)
+
