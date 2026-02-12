@@ -48,6 +48,6 @@ simulations = backtest.monkey_carlo(n_simulations=n_simulations)
 backtest.plot_simulations(simulations)
 
 # model sensitivity test
-simulations = backtest.test_overfit(backtest_type = "future", simulations=100, augmentation_size=0.2, normalized=False)
+simulations = backtest.test_overfit(backtest_type = "future", simulations=100, augmentation_size=0.2, normalized=True)
 backtest.plot_simulations(simulations)
 

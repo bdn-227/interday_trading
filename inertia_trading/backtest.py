@@ -704,7 +704,8 @@ class BacktestEngine:
                     line=dict(color=color, width=1),
                     opacity=0.15,
                     showlegend=False,
-                    name=col
+                    name=col,
+                    hoverlabel=dict(namelength=-1)
                 ))
 
 
