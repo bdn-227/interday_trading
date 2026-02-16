@@ -22,12 +22,12 @@ price_data = MarketData(csv, market="XFRA")
 price_data.df
 
 # parameters
-ema_short = 20
-ema_long = 40
+ema_short = 15
+ema_long = 30
 atr_length = 14
-atr_sl = 2
+atr_sl = 3
 atr_limit = 0.5
-crossover = True
+crossover = False
 n_simulations = 100
 
 # calculate indicators

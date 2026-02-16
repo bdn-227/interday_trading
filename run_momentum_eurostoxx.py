@@ -22,12 +22,12 @@ price_data = MarketData(csv, market="XFRA")
 price_data.df
 
 # parameters
-ema_short = 10
+ema_short = 5
 ema_long = 20
 atr_length = 14
 atr_sl = 2
 atr_limit = 0.5
-crossover = True
+crossover = False
 n_simulations = 100
 
 # calculate indicators
@@ -43,7 +43,7 @@ equity_curve = backtest.run_etf(risk=0.01)
 backtest.plot_equity_df(normalize=True, log_axis=False)
 
 # model sensitivity test
-simulations = backtest.test_overfit(backtest_type = "etf", simulations=100, augmentation_size=0.2, normalized=True)
+simulations = backtest.test_overfit(backtest_type = "etf", simulations=100, augmentation_size=1, normalized=True)
 backtest.plot_simulations(simulations, title="Parameter Sensitivity Test")
 
 # perform monte carlo
