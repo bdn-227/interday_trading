@@ -35,9 +35,9 @@ class MarketData:
         self.format_df()
         self.check_integrity(market)
         self.drop_duplicates()
-        self.add_next(column="open", shift=1)
-        self.add_next(column="low", shift=1)
-        self.add_next(column="high", shift=1)
+        self.add_next(column="open", shift=-1)
+        self.add_next(column="low", shift=-1)
+        self.add_next(column="high", shift=-1)
 
 
     def format_df(self):
@@ -216,7 +216,7 @@ class MarketData:
         return self
 
 
-    def add_next(self, column="close", shift=1):
+    def add_next(self, column="close", shift=-1):
         """
         Docstring for add_next
         

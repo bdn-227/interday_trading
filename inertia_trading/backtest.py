@@ -44,7 +44,7 @@ class BacktestEngine:
         self.units_ls = []
         
         # filtering of data
-        required_cols = self.required_indicators + ["future.open.1", "future.low.1", "future.high.1"]
+        required_cols = self.required_indicators + ["future.open.-1", "future.low.-1", "future.high.-1"]
         clean_data = self.data.dropna(subset=required_cols).copy()
 
         # backtesting loop
@@ -55,9 +55,9 @@ class BacktestEngine:
             # we check of the orders would be filled the next morning
             current_date = row["datetime"]
             today_close = row['close']
-            f_open = row["future.open.1"]
-            f_low  = row["future.low.1"]
-            f_high = row["future.high.1"]
+            f_open = row["future.open.-1"]
+            f_low  = row["future.low.-1"]
+            f_high = row["future.high.-1"]
 
             # strategy is being executed here --> as return we get -1, 0 or 1 --> short, exit, sell
             target_state, strat_sl, strat_limit = self.strategy.on_bar(row, self.position)
@@ -83,7 +83,7 @@ class BacktestEngine:
                         'exit': exit_price, 
                         'pnl': pnl, 
                         'capital': self.capital - (self.entry_price*self.trading_cost + exit_price*self.trading_cost),
-                        'return': pnl_exit / (self.capital - pnl_exit),
+                        'return': pnl / (self.capital - pnl),
                     })
                     
                     self.position = 0
@@ -107,7 +107,7 @@ class BacktestEngine:
                         'exit': exit_price, 
                         'pnl': pnl, 
                         'capital': self.capital - (self.entry_price*self.trading_cost + exit_price*self.trading_cost),
-                        'return': pnl_exit / (self.capital - pnl_exit),
+                        'return': pnl / (self.capital - pnl),
                     })
                     
                     self.position = 0
@@ -143,7 +143,7 @@ class BacktestEngine:
                             'exit': strat_limit, 
                             'pnl': pnl_exit, 
                             'capital': self.capital  - (self.entry_price*self.trading_cost + strat_limit*self.trading_cost),
-                        'return': pnl_exit / (self.capital - pnl_exit),
+                            'return': pnl_exit / (self.capital - pnl_exit),
                         })
                         self.position = 0
                         self.units = 0
@@ -262,7 +262,7 @@ class BacktestEngine:
         self.units_ls = []
         
         # filter data
-        required_cols = self.required_indicators + ["future.open.1", "future.low.1", "future.high.1"]
+        required_cols = self.required_indicators + ["future.open.-1", "future.low.-1", "future.high.-1"]
         clean_data = self.data.dropna(subset=required_cols).copy()
 
         # run backtesting loop
@@ -271,9 +271,9 @@ class BacktestEngine:
             # extract relevant data
             current_date = row["datetime"]
             today_close = row['close']
-            f_open = row["future.open.1"]
-            f_low  = row["future.low.1"]
-            f_high = row["future.high.1"]
+            f_open = row["future.open.-1"]
+            f_low  = row["future.low.-1"]
+            f_high = row["future.high.-1"]
 
             # get the target state. here, -1 and 0 are considered exit signals, as we go long only
             target_state, strat_sl, strat_limit = self.strategy.on_bar(row, self.position)
@@ -591,7 +591,7 @@ class BacktestEngine:
             return None
         
         # same clean data as original
-        clean_data = self.data.dropna(subset=self.required_indicators + ["future.open.1"]).copy()
+        clean_data = self.data.dropna(subset=self.required_indicators + ["future.open.-1"]).copy()
         
         # entry probability
         n_days = len(clean_data)
@@ -623,7 +623,7 @@ class BacktestEngine:
             for idx, row in clean_data.iterrows():
                 
                 today_close = row['close']
-                tomorrow_open = row["future.open.1"]
+                tomorrow_open = row["future.open.-1"]
                 
                 # default state
                 target_state = position

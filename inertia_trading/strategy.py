@@ -60,13 +60,15 @@ class Strategy(ABC):
 
 class EmaCrossoverStrategy(Strategy):
 
-    def __init__(self, ema_short=50, ema_long=100, length_atr=14, atr_multiplier=3):
+    def __init__(self, ema_short=50, ema_long=100, length_atr=14, atr_sl=3, atr_limit=0.5, crossover=True):
         
         # save parameters
         self.ema_short = ema_short
         self.ema_long = ema_long
         self.length_atr = length_atr
-        self.atr_multiplier = atr_multiplier
+        self.atr_sl = atr_sl
+        self.atr_limit = atr_limit
+        self.crossover = crossover
         self.argument_d = self.get_arguments()
 
         # actual execution
@@ -80,7 +82,7 @@ class EmaCrossoverStrategy(Strategy):
         if not self.check_constraints(ema_short=self.ema_short, 
                                       ema_long=self.ema_long, 
                                       length_atr=self.length_atr, 
-                                      atr_multiplier=self.atr_multiplier):
+                                      atr_sl=self.atr_sl):
             raise ValueError("Some parameters do not meet the strategy requirements")
 
 
@@ -89,7 +91,7 @@ class EmaCrossoverStrategy(Strategy):
         arguments_d = {"ema_short": [self.ema_short, int],
                        "ema_long": [self.ema_long, int],
                        "length_atr": [self.length_atr, int],
-                       "atr_multiplier": [self.atr_multiplier, float]}
+                       "atr_sl": [self.atr_sl, float]}
         return arguments_d
 
 
@@ -97,7 +99,7 @@ class EmaCrossoverStrategy(Strategy):
         return [f"ema.close.{self.ema_short}", f"ema.close.{self.ema_long}", f'atr.{self.length_atr}']
     
 
-    def check_constraints(self, ema_short, ema_long, length_atr, atr_multiplier):
+    def check_constraints(self, ema_short, ema_long, length_atr, atr_sl):
         """
         This method tests, if the given strategy is correctly parameterized. It returns true if all necessary conditions are met.
         If this is not the case, a false is returned
@@ -111,7 +113,7 @@ class EmaCrossoverStrategy(Strategy):
         ema_correct = ema_short < ema_long
         ema_length = (ema_short > 1) and (ema_long > 1)
         atr_length = length_atr > 1
-        atr_mult = atr_multiplier > 0
+        atr_mult = atr_sl > 0
         
         # now return the test results
         return ema_correct and ema_length and atr_length and atr_mult
@@ -126,12 +128,15 @@ class EmaCrossoverStrategy(Strategy):
         atr = row[f'atr.{self.length_atr}']
 
         # detect Crossover
-        was_crossover = False
-        if self.prev_ema_s is not None:
-            if self.prev_ema_s < self.prev_ema_l and ema_s > ema_l:
-                was_crossover = True
-            elif self.prev_ema_s > self.prev_ema_l and ema_s < ema_l:
-                was_crossover = True
+        if self.crossover:
+            was_crossover = False
+            if self.prev_ema_s is not None:
+                if self.prev_ema_s < self.prev_ema_l and ema_s > ema_l:
+                    was_crossover = True
+                elif self.prev_ema_s > self.prev_ema_l and ema_s < ema_l:
+                    was_crossover = True
+        else:
+            was_crossover = True
 
         # default parameters
         target_state = current_position
@@ -139,25 +144,25 @@ class EmaCrossoverStrategy(Strategy):
         # go long
         if ema_s > ema_l and was_crossover:
             target_state = 1
-            self.sl_price = close - (self.atr_multiplier * atr)
-            self.limit_price = close - (atr * 0.5)
+            self.sl_price = close - (self.atr_sl * atr)
+            self.limit_price = close - (atr * self.atr_limit)
 
 
         # go short
         elif ema_s < ema_l and was_crossover:
             target_state = -1
-            self.sl_price = close + (self.atr_multiplier * atr)
-            self.limit_price = close + (atr * 0.5)
+            self.sl_price = close + (self.atr_sl * atr)
+            self.limit_price = close + (atr * self.atr_limit)
         
 
         # exit long
         elif current_position == 1:
             if close < self.sl_price:
                 target_state = 0
-                self.limit_price = close + (atr * 0.5)
+                self.limit_price = close + (atr * self.atr_limit)
             
             else:
-                new_sl = close - (self.atr_multiplier * atr)
+                new_sl = close - (self.atr_sl * atr)
                 if new_sl > self.sl_price:
                     self.sl_price = new_sl
 
@@ -166,10 +171,10 @@ class EmaCrossoverStrategy(Strategy):
         elif current_position == -1:
             if close > self.sl_price:
                 target_state = 0
-                self.limit_price = close - (atr * 0.5)
+                self.limit_price = close - (atr * self.atr_limit)
 
             else:
-                new_sl = close + (self.atr_multiplier * atr)
+                new_sl = close + (self.atr_sl * atr)
                 if new_sl < self.sl_price:
                     self.sl_price = new_sl
         

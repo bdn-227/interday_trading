@@ -16,14 +16,16 @@ from inertia_trading import MarketData, EmaCrossoverStrategy, BacktestEngine
 
 
 # load the data and convert to class
-csv = pd.read_csv("data/eurostoxx.csv")
-price_data = MarketData(csv, market="XFRA")
+price_data = MarketData(data_in={"contract_type": "Stock", "symbol": "EUN2"}, market="XFRA")
+price_data.write_df("data/eun2")
 
 # parameters
-ema_short = 5
-ema_long = 10
+ema_short = 4
+ema_long = 12
 atr_length = 14
-atr_multiplier = 3
+atr_ls = 3
+atr_limit = 0.5
+crossover=False
 n_simulations = 100
 
 # calculate indicators
@@ -33,11 +35,11 @@ price_data.add_atr(length=atr_length)
 
 
 # backtest
-strategy = EmaCrossoverStrategy(ema_short=ema_short, ema_long=ema_long, length_atr=atr_length, atr_multiplier=atr_multiplier)
+strategy = EmaCrossoverStrategy(ema_short=ema_short, ema_long=ema_long, length_atr=atr_length, atr_sl=atr_ls, atr_limit=atr_limit, crossover=crossover)
 backtest = BacktestEngine(price_data, strategy)
-equity_curve = backtest.run_etf(risk=0.01, capital=1000)
+equity_curve = backtest.run_etf(risk=0.05, capital=1000)
 print(equity_curve)
-backtest.plot_equity_df(normalize=True, log_axis=False)
+backtest.plot_equity_df(normalize=True, log_axis=True)
 
 # test if the strategy overfits
 simulations = backtest.test_overfit(backtest_type = "etf", simulations=100, augmentation_size=0.2, normalized=False)

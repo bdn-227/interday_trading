@@ -19,12 +19,15 @@ from inertia_trading import MarketData, EmaCrossoverStrategy, BacktestEngine
 # load the data and convert to class
 csv = pd.read_csv("data/eur_usd.csv")
 price_data = MarketData(csv, market="XFRA")
+price_data.df
 
 # parameters
-ema_short = 5
-ema_long = 10
+ema_short = 50
+ema_long = 100
 atr_length = 14
-atr_multiplier = 3
+atr_sl = 3
+atr_limit = 0.5
+crossover = False
 n_simulations = 100
 
 # calculate indicators
@@ -33,14 +36,10 @@ price_data.add_ema(ema_long)
 price_data.add_atr(length=atr_length)
 
 
-# plot the nav (net asset value --> i.e. the price)
-price_data.plot_nav(normalize=False, indicators=["ema.close.5", "ema.close.10"])
-
-
 # backtest
-strategy = EmaCrossoverStrategy(ema_short=ema_short, ema_long=ema_long, length_atr=atr_length, atr_multiplier=atr_multiplier)
+strategy = EmaCrossoverStrategy(ema_short=ema_short, ema_long=ema_long, length_atr=atr_length, atr_sl=atr_sl, atr_limit=atr_limit, crossover=crossover)
 backtest = BacktestEngine(price_data, strategy)
-equity_curve = backtest.run_future(risk=0.01)
+equity_curve = backtest.run_future(risk=0.05)
 print(equity_curve)
 backtest.plot_equity_df(normalize=True, log_axis=False)
 
