@@ -11,7 +11,7 @@ trader = LiveIBKREngine(strategy=strategy, contract=contract)
 
 
 # 1. connect to IB gateway
-trader.start_IB(ports = [4002, 7497])
+trader.start_IB()
 
 
 # 2. clean-up: cancel all open orders from yesterday (especially buy orders)

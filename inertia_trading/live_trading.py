@@ -21,13 +21,13 @@ class LiveIBKREngine:
         return contract, whatToShow
     
     
-    def start_IB(self, ports):
+    def start_IB(self, ports=[4002, 7497], host='127.0.0.1'):
         util.startLoop()
         self.ib = IB()
         my_client_id = random.randint(1, 9999)
         for port in ports:
             try:
-                self.ib.connect('127.0.0.1', port, clientId=my_client_id)
+                self.ib.connect(host, port, clientId=my_client_id)
                 print(f"Sucess with port: {port}")
             except:
                 print(f"FAILED TO CONNECT WITH PORT: {port}")
