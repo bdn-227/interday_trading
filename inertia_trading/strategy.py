@@ -82,7 +82,8 @@ class EmaCrossoverStrategy(Strategy):
         if not self.check_constraints(ema_short=self.ema_short, 
                                       ema_long=self.ema_long, 
                                       length_atr=self.length_atr, 
-                                      atr_sl=self.atr_sl):
+                                      atr_sl=self.atr_sl,
+                                      atr_limit=self.atr_limit):
             raise ValueError("Some parameters do not meet the strategy requirements")
 
 
@@ -91,7 +92,9 @@ class EmaCrossoverStrategy(Strategy):
         arguments_d = {"ema_short": [self.ema_short, int],
                        "ema_long": [self.ema_long, int],
                        "length_atr": [self.length_atr, int],
-                       "atr_sl": [self.atr_sl, float]}
+                       "atr_sl": [self.atr_sl, float],
+                       "atr_limit": [self.atr_limit, float],
+                       "crossover": [self.crossover, bool]}
         return arguments_d
 
 
@@ -99,7 +102,7 @@ class EmaCrossoverStrategy(Strategy):
         return [f"ema.close.{self.ema_short}", f"ema.close.{self.ema_long}", f'atr.{self.length_atr}']
     
 
-    def check_constraints(self, ema_short, ema_long, length_atr, atr_sl):
+    def check_constraints(self, ema_short, ema_long, length_atr, atr_sl, atr_limit):
         """
         This method tests, if the given strategy is correctly parameterized. It returns true if all necessary conditions are met.
         If this is not the case, a false is returned
@@ -113,10 +116,10 @@ class EmaCrossoverStrategy(Strategy):
         ema_correct = ema_short < ema_long
         ema_length = (ema_short > 1) and (ema_long > 1)
         atr_length = length_atr > 1
-        atr_mult = atr_sl > 0
+        atr = atr_sl > 0 and atr_limit > 0
         
         # now return the test results
-        return ema_correct and ema_length and atr_length and atr_mult
+        return ema_correct and ema_length and atr_length and atr
 
 
     def on_bar(self, row, current_position):

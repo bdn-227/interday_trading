@@ -793,15 +793,20 @@ class BacktestEngine:
                 original_val = specs[0]
                 param_type = specs[1]
                 
-                # generate the new values
-                factor = random.uniform(1 - augmentation_size, 1 + augmentation_size)
-                new_val = original_val * factor
+                if param_type in [int, float]:
+                    # generate the new values
+                    factor = random.uniform(1 - augmentation_size, 1 + augmentation_size)
+                    new_val = original_val * factor
+                    
+                    # enforce the correct types
+                    if param_type is int:
+                        new_val = int(round(new_val))
+                    elif param_type is float:
+                        new_val = float(new_val)
                 
-                # enforce the correct types
-                if param_type is int:
-                    new_val = int(round(new_val))
-                elif param_type is float:
-                    new_val = float(new_val)
+                # for bool we use the same
+                elif param_type == bool:
+                    new_val = original_val
                 
                 # populate the dict
                 augmented_params[param_name] = new_val
