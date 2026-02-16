@@ -20,12 +20,12 @@ price_data = MarketData(data_in={"contract_type": "Stock", "symbol": "EUN2"}, ma
 price_data.write_df("data/eun2")
 
 # parameters
-ema_short = 4
-ema_long = 12
+ema_short = 20
+ema_long = 50
 atr_length = 14
-atr_ls = 3
+atr_ls = 2
 atr_limit = 0.5
-crossover=False
+crossover=True
 n_simulations = 100
 
 # calculate indicators
@@ -38,7 +38,6 @@ price_data.add_atr(length=atr_length)
 strategy = EmaCrossoverStrategy(ema_short=ema_short, ema_long=ema_long, length_atr=atr_length, atr_sl=atr_ls, atr_limit=atr_limit, crossover=crossover)
 backtest = BacktestEngine(price_data, strategy)
 equity_curve = backtest.run_etf(risk=0.05, capital=1000)
-print(equity_curve)
 backtest.plot_equity_df(normalize=True, log_axis=True)
 
 # test if the strategy overfits

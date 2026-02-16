@@ -815,7 +815,7 @@ class BacktestEngine:
             # create a new instance of the strategy class and run the backtest
             strategy_class = original_strategy.__class__
             new_strategy_instance = strategy_class(**augmented_params)
-            strategy_name = "-".join(new_strategy_instance.get_indicators())
+            strategy_name = "-".join([f"{key}.{val[0]}" for key, val in new_strategy_instance.argument_d.items()])
 
             # add the required indicators to the market data --> should be better now.
             # However, depending how many simulations will be made in the future, this could be further optimized
