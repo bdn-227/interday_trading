@@ -1,3 +1,4 @@
+
 # libraries
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -30,6 +31,10 @@ n_simulations = 100
 price_data.add_ema(ema_short)
 price_data.add_ema(ema_long)
 price_data.add_atr(length=atr_length)
+
+
+# plot the nav (net asset value --> i.e. the price)
+price_data.plot_nav(normalize=False, indicators=["ema.close.5", "ema.close.10"])
 
 
 # backtest

@@ -5,7 +5,9 @@ import numpy as np
 from IPython.display import display
 import random
 from ib_insync import util, IB, Forex, Index, Stock
-
+import plotly.graph_objects as go
+import numpy as np
+from plotly.subplots import make_subplots
 
 class MarketData:
     def __init__(self, data_in, market = "XFRA", durationStr='50 Y', barSizeSetting='1 day'):
@@ -222,3 +224,51 @@ class MarketData:
         :param shift: int how many offsets
         """
         self.df[f"future.{column}.{shift}"] = self.df[column].shift(shift)
+    
+
+    def plot_nav(self, normalize=True, log_axis=False, column="close", indicators=False):
+
+        # initialize figure with secondary_y enabled for the second row
+        fig = go.Figure()
+
+        # get the data
+        plot_data = self.df.copy().set_index("datetime")[column]
+
+        # perform normalization
+        if normalize:
+            plot_data = plot_data / plot_data.iloc[0]
+
+        # plot
+        fig.add_trace(go.Scatter(x=plot_data.index, 
+                                 y=plot_data,
+                                 mode='lines', 
+                                 name='Asset Price',
+                                 line=dict(color='black', width=1)))
+
+        # plot the indicators
+        if type(indicators) == list:
+            for indicator in indicators:
+                if indicator in self.df.columns:
+                    indicator_df = self.df.copy().set_index("datetime")[indicator]
+                    fig.add_trace(go.Scatter(x=indicator_df.index, 
+                                            y=indicator_df,
+                                            mode='lines', 
+                                            name=indicator,
+                                            line=dict(width=1)))
+            
+        # update layout
+        fig.update_layout(
+            title=f"Net asset value: " + self.df["symbol"].unique()[0],
+            template="simple_white",
+            height=900, width=1200,
+            showlegend=True,
+            legend=dict(orientation="v", y=1.02, x=0)
+        )
+
+        # axis Labels
+        fig.update_yaxes(title_text="NAV", showgrid=False)
+        fig.update_xaxes(title_text="Date time", showgrid=False)
+        if log_axis:
+            fig.update_yaxes(type="log", row=1, col=1)
+
+        fig.show()
