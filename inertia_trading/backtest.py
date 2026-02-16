@@ -183,7 +183,7 @@ class BacktestEngine:
                                 'exit': strat_sl, 
                                 'pnl': pnl_crash, 
                                 'capital': self.capital - (strat_limit*self.trading_cost + strat_sl*self.trading_cost),
-                                'return': pnl_exit / (self.capital - pnl_exit),
+                                'return': pnl_crash / (self.capital - pnl_crash),
                             })
 
                             # reset parameters upon stop loss
