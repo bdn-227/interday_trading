@@ -6,12 +6,12 @@ from inertia_trading import LiveIBKREngine, EmaCrossoverStrategy
 
 # create instance of live trading class
 contract = {"contract_type": "Stock", "symbol": "VUSA", "exchange": "AEB", "currency": "EUR"}
-strategy = EmaCrossoverStrategy(ema_short=5, ema_long=10, length_atr=14, atr_multiplier=3)
+strategy = EmaCrossoverStrategy(ema_short=50, ema_long=100, length_atr=14, atr_sl=3, atr_limit=0.5, crossover=False)
 trader = LiveIBKREngine(strategy=strategy, contract=contract)
 
 
 # 1. connect to IB gateway
-trader.start_IB()
+trader.start_IB(ports = [4002, 7497])
 
 
 # 2. clean-up: cancel all open orders from yesterday (especially buy orders)
