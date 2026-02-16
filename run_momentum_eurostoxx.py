@@ -1,3 +1,4 @@
+
 # libraries
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,16 +17,17 @@ from inertia_trading import MarketData, EmaCrossoverStrategy, BacktestEngine
 
 
 # load the data and convert to class
-price_data = MarketData(data_in={"contract_type": "Stock", "symbol": "EUN2"}, market="XFRA")
-price_data.write_df("data/eun2")
+csv = pd.read_csv("data/eurostoxx.csv")
+price_data = MarketData(csv, market="XFRA")
+price_data.df
 
 # parameters
-ema_short = 4
-ema_long = 12
+ema_short = 10
+ema_long = 20
 atr_length = 14
-atr_ls = 3
-atr_limit = 0.5
-crossover=False
+atr_sl = 3
+atr_limit = 0.1
+crossover = True
 n_simulations = 100
 
 # calculate indicators
@@ -35,20 +37,20 @@ price_data.add_atr(length=atr_length)
 
 
 # backtest
-strategy = EmaCrossoverStrategy(ema_short=ema_short, ema_long=ema_long, length_atr=atr_length, atr_sl=atr_ls, atr_limit=atr_limit, crossover=crossover)
+strategy = EmaCrossoverStrategy(ema_short=ema_short, ema_long=ema_long, length_atr=atr_length, atr_sl=atr_sl, atr_limit=atr_limit, crossover=crossover)
 backtest = BacktestEngine(price_data, strategy)
-equity_curve = backtest.run_etf(risk=0.05, capital=1000)
-print(equity_curve)
-backtest.plot_equity_df(normalize=True, log_axis=True)
-
-# test if the strategy overfits
-simulations = backtest.test_overfit(backtest_type = "etf", simulations=100, augmentation_size=0.2, normalized=False)
-backtest.plot_simulations(simulations)
+equity_curve = backtest.run_future(risk=0.01)
+backtest.plot_equity_df(normalize=True, log_axis=False)
 
 # perform monte carlo
-#simulations = backtest.monte_carlo(n_simulations=n_simulations*10, drawdown=0.5)
-#backtest.plot_simulations(simulations)
+simulations = backtest.monte_carlo(n_simulations=n_simulations*10, drawdown=0.5)
+backtest.plot_simulations(simulations, title="Monte Carlo (Risk of Ruin)")
 
 # perform the random monkey
-#simulations = backtest.monkey_carlo(n_simulations=n_simulations)
-#backtest.plot_simulations(simulations)
+simulations = backtest.monkey_carlo(n_simulations=n_simulations)
+backtest.plot_simulations(simulations, title="Monte Carlo (Statistical significance of the trading parameters)")
+
+# model sensitivity test
+simulations = backtest.test_overfit(backtest_type = "future", simulations=100, augmentation_size=0.2, normalized=True)
+backtest.plot_simulations(simulations, title="Parameter Sensitivity Test")
+
