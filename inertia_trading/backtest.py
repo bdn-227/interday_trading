@@ -190,7 +190,8 @@ class BacktestEngine:
                             self.position = 0
                             self.units = 0
                             self.sl_price = None
-                            
+
+
                         else:
                             # here, we actually entered a trade and did not get killed instantly
                             self.position = target_state
@@ -198,6 +199,12 @@ class BacktestEngine:
                             self.entry_date = current_date
                             self.sl_price = strat_sl
                             self.units = new_units
+            
+            # handling trailing stops here
+            if self.position == 1:
+                self.sl_price = np.max([self.sl_price, strat_sl])
+            if self.position == -1:
+                self.sl_price = np.min([self.sl_price, strat_sl])
 
 
             # here we perform mark-to-market tracking of portfolio size --> for smooth equity curve
@@ -339,6 +346,7 @@ class BacktestEngine:
                         # reset positions
                         self.position = 0
                         self.units = 0
+                        self.sl_price = None
 
                 # enter new positions
                 elif self.position == 0 and target_state == 1:
@@ -363,6 +371,10 @@ class BacktestEngine:
                         self.entry_price = strat_limit
                         self.entry_date = current_date
                         self.sl_price = strat_sl
+            
+            if self.position != 0:
+                # nothing happens, just update trailing stop
+                self.sl_price = np.max([strat_sl, self.sl_price])
 
 
             # update equity curve
@@ -814,7 +826,10 @@ class BacktestEngine:
 
             # create a new instance of the strategy class and run the backtest
             strategy_class = original_strategy.__class__
-            new_strategy_instance = strategy_class(**augmented_params)
+            try:
+                new_strategy_instance = strategy_class(**augmented_params)
+            except:
+                continue
             strategy_name = "-".join([f"{key}.{val[0]}" for key, val in new_strategy_instance.argument_d.items()])
 
             # add the required indicators to the market data --> should be better now.

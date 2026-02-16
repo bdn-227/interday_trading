@@ -25,8 +25,8 @@ price_data.df
 ema_short = 10
 ema_long = 20
 atr_length = 14
-atr_sl = 3
-atr_limit = 0.1
+atr_sl = 2
+atr_limit = 0.5
 crossover = True
 n_simulations = 100
 
@@ -39,8 +39,12 @@ price_data.add_atr(length=atr_length)
 # backtest
 strategy = EmaCrossoverStrategy(ema_short=ema_short, ema_long=ema_long, length_atr=atr_length, atr_sl=atr_sl, atr_limit=atr_limit, crossover=crossover)
 backtest = BacktestEngine(price_data, strategy)
-equity_curve = backtest.run_future(risk=0.01)
+equity_curve = backtest.run_etf(risk=0.01)
 backtest.plot_equity_df(normalize=True, log_axis=False)
+
+# model sensitivity test
+simulations = backtest.test_overfit(backtest_type = "etf", simulations=100, augmentation_size=0.2, normalized=True)
+backtest.plot_simulations(simulations, title="Parameter Sensitivity Test")
 
 # perform monte carlo
 simulations = backtest.monte_carlo(n_simulations=n_simulations*10, drawdown=0.5)
@@ -50,7 +54,5 @@ backtest.plot_simulations(simulations, title="Monte Carlo (Risk of Ruin)")
 simulations = backtest.monkey_carlo(n_simulations=n_simulations)
 backtest.plot_simulations(simulations, title="Monte Carlo (Statistical significance of the trading parameters)")
 
-# model sensitivity test
-simulations = backtest.test_overfit(backtest_type = "future", simulations=100, augmentation_size=0.2, normalized=True)
-backtest.plot_simulations(simulations, title="Parameter Sensitivity Test")
+
 

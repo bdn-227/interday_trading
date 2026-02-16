@@ -116,7 +116,7 @@ class EmaCrossoverStrategy(Strategy):
         ema_correct = ema_short < ema_long
         ema_length = (ema_short > 1) and (ema_long > 1)
         atr_length = length_atr > 1
-        atr = atr_sl > 0 and atr_limit > 0
+        atr = atr_sl >= 0 and atr_limit >= 0
         
         # now return the test results
         return ema_correct and ema_length and atr_length and atr

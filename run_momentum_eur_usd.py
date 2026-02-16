@@ -22,12 +22,12 @@ price_data = MarketData(csv, market="XFRA")
 price_data.df
 
 # parameters
-ema_short = 50
-ema_long = 100
+ema_short = 20
+ema_long = 40
 atr_length = 14
-atr_sl = 2.5
+atr_sl = 2
 atr_limit = 0.5
-crossover = False
+crossover = True
 n_simulations = 100
 
 # calculate indicators
@@ -42,6 +42,10 @@ backtest = BacktestEngine(price_data, strategy)
 equity_curve = backtest.run_future(risk=0.01)
 backtest.plot_equity_df(normalize=True, log_axis=False)
 
+# model sensitivity test
+simulations = backtest.test_overfit(backtest_type = "future", simulations=100, augmentation_size=0.2, normalized=True)
+backtest.plot_simulations(simulations, title="Parameter Sensitivity Test", quantile=(0.75,))
+
 # perform monte carlo
 simulations = backtest.monte_carlo(n_simulations=n_simulations*10, drawdown=0.5)
 backtest.plot_simulations(simulations, title="Monte Carlo (Risk of Ruin)")
@@ -49,8 +53,4 @@ backtest.plot_simulations(simulations, title="Monte Carlo (Risk of Ruin)")
 # perform the random monkey
 simulations = backtest.monkey_carlo(n_simulations=n_simulations)
 backtest.plot_simulations(simulations, title="Monte Carlo (Statistical significance of the trading parameters)")
-
-# model sensitivity test
-simulations = backtest.test_overfit(backtest_type = "future", simulations=100, augmentation_size=0.2, normalized=True)
-backtest.plot_simulations(simulations, title="Parameter Sensitivity Test", quantile=(0.75,))
 
