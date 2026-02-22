@@ -91,8 +91,8 @@ class MeanReversion(Strategy):
         # calculate logic for holding --> this one is supposed to allow for riding the momentum and adjust stop losses over time
         elif rsi < self.rsi_exit and current_position == 1:
             target_state = 1
-            new_sl = close + (atr * self.atr_sl)
-            if new_sl < self.sl_price:
+            new_sl = close - (self.atr_sl * atr)
+            if new_sl > self.sl_price:
                 self.sl_price = new_sl
 
 

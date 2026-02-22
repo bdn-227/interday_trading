@@ -22,25 +22,25 @@ price_data = MarketData(csv, market="XFRA")
 price_data.df
 
 # strategy parameters
-length_rsi=14
-rsi_entry=30
+length_rsi = 7
+rsi_entry = 30
 rsi_exit = 70
-length_atr=14
-atr_sl=3
-atr_limit=0.5
+length_atr = 14
+atr_sl = 3
+atr_limit = 0.5
 
 # modelling parameters
 n_simulations = 100
 
 # calculate indicators
 price_data.add_atr(length=length_atr)
-price_data.add_rsi(column="close", length=length_atr)
+price_data.add_rsi(column="close", length=length_rsi)
 
 
 # backtest
 strategy = MeanReversion(length_rsi=length_rsi, rsi_entry=rsi_entry, rsi_exit=rsi_exit, length_atr=length_atr, atr_sl=atr_sl, atr_limit=atr_limit)
 backtest = BacktestEngine(price_data, strategy)
-equity_curve = backtest.run_etf(risk=0.01)
+equity_curve = backtest.run_etf(risk=0.05)
 backtest.plot_equity_df(normalize=True, log_axis=False)
 
 # model sensitivity test
