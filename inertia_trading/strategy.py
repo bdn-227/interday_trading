@@ -56,5 +56,7 @@ class Strategy(ABC):
                     market_data.add_ema(length=int(indicator.split(".")[2]), column=indicator.split(".")[1])
                 elif indicator.split(".")[0] == "atr":
                      market_data.add_atr(int(indicator.split(".")[-1]))
+                elif indicator.split(".")[0] == "rsi":
+                    market_data.add_rsi(length=int(indicator.split(".")[2]), column=indicator.split(".")[1])
 
 

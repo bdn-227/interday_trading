@@ -2,7 +2,7 @@ from .strategy import Strategy
 
 class MeanReversion(Strategy):
 
-    def __init__(self, length_rsi=14, rsi_entry=30, rsi_exit = 70, length_atr=14, atr_sl=3, atr_limit=0.5):
+    def __init__(self, length_rsi=14, rsi_entry=30, rsi_exit = 70, length_atr=14, atr_sl=3, atr_limit=0.5, ema_length=200, trailing_stop=False):
         
         # save parameters
         self.length_rsi = length_rsi
@@ -11,6 +11,8 @@ class MeanReversion(Strategy):
         self.length_atr = length_atr
         self.atr_sl = atr_sl
         self.atr_limit = atr_limit
+        self.ema_length = ema_length
+        self.trailing_stop = trailing_stop
         self.argument_d = self.get_arguments()
 
         # actual execution
@@ -25,7 +27,9 @@ class MeanReversion(Strategy):
                                       rsi_entry=rsi_entry,
                                       rsi_exit=rsi_exit,
                                       atr_sl=self.atr_sl,
-                                      atr_limit=self.atr_limit):
+                                      atr_limit=self.atr_limit,
+                                      ema_length=ema_length,
+                                      ):
             raise ValueError("Some parameters do not meet the strategy requirements")
 
 
@@ -38,15 +42,16 @@ class MeanReversion(Strategy):
                        "length_atr": [self.length_atr, int],
                        "atr_sl": [self.atr_sl, float],
                        "atr_limit": [self.atr_limit, float],
+                       "ema_length": [self.ema_length, int],
                        }
         return arguments_d
 
 
     def get_indicators(self):
-        return [f"rsi.close.{self.length_rsi}", f'atr.{self.length_atr}']
+        return [f"rsi.close.{self.length_rsi}", f'atr.{self.length_atr}', f"ema.close.{self.ema_length}"]
     
 
-    def check_constraints(self, length_rsi, rsi_entry, rsi_exit, length_atr, atr_sl, atr_limit):
+    def check_constraints(self, length_rsi, rsi_entry, rsi_exit, length_atr, atr_sl, atr_limit, ema_length):
         """
         This method tests, if the given strategy is correctly parameterized. It returns true if all necessary conditions are met.
         If this is not the case, a false is returned
@@ -59,15 +64,16 @@ class MeanReversion(Strategy):
         # check indicators
         rsi_correct = length_rsi > 1
         atr_length = length_atr > 1
+        ema_correct = ema_length > 1
 
         # check indicator cutoffs
-        rsi_inbound = (0 < rsi_entry < 100) and (0 < rsi_exit < 100)
+        rsi_inbound = (0 < rsi_entry < 100) and (0 < rsi_exit < 100) and rsi_entry < rsi_exit
 
         # check limits
         atr = atr_sl >= 0 and atr_limit >= 0
         
         # now return the test results
-        return rsi_correct and atr_length and rsi_inbound and atr
+        return rsi_correct and atr_length and rsi_inbound and atr and ema_correct
 
 
     def on_bar(self, row, current_position):
@@ -76,13 +82,14 @@ class MeanReversion(Strategy):
         rsi = row[f"rsi.close.{self.length_rsi}"]
         close = row['close']
         atr = row[f'atr.{self.length_atr}']
+        ema = row[f'ema.close.{self.ema_length}']
 
         # defaults
         target_state = current_position
 
 
         # calculate entry
-        if rsi < self.rsi_entry and current_position == 0:
+        if rsi < self.rsi_entry and current_position == 0 and close > ema:
             target_state = 1
             self.limit_price = close - (atr * self.atr_limit)
             self.sl_price = close - (atr * self.atr_sl)
@@ -91,9 +98,10 @@ class MeanReversion(Strategy):
         # calculate logic for holding --> this one is supposed to allow for riding the momentum and adjust stop losses over time
         elif rsi < self.rsi_exit and current_position == 1:
             target_state = 1
-            new_sl = close - (self.atr_sl * atr)
-            if new_sl > self.sl_price:
-                self.sl_price = new_sl
+            if self.trailing_stop:
+                new_sl = close - (self.atr_sl * atr)
+                if new_sl > self.sl_price:
+                    self.sl_price = new_sl
 
 
         # calculate exit

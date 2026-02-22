@@ -4,7 +4,6 @@ import numpy as np
 from plotly.subplots import make_subplots
 import plotly.colors as pc
 import random
-import math
 
 
 class BacktestEngine:
@@ -795,7 +794,8 @@ class BacktestEngine:
         all_sim_curves = []
 
         # perform the simulations
-        for i in range(simulations):
+        i = 0
+        while i < simulations:
             
             # create a dict for the augmented variables
             augmented_params = {}
@@ -814,7 +814,7 @@ class BacktestEngine:
                     if param_type is int:
                         new_val = int(round(new_val))
                     elif param_type is float:
-                        new_val = float(new_val)
+                        new_val = round(float(new_val), 2)
                 
                 # for bool we use the same
                 elif param_type == bool:
@@ -846,6 +846,7 @@ class BacktestEngine:
             # store the results
             result_df = pd.DataFrame(sim_df.loc[:, "equity"]).rename({"equity": f"sim_{i}_{strategy_name}"}, axis=1)
             all_sim_curves.append(result_df)
+            i+=1
         
 
         # put everything together --> important, different strategies might have different amounts of 
