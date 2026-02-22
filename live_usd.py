@@ -8,7 +8,7 @@ from inertia_trading import LiveIBKREngine, EmaCrossoverStrategy, MarketData
 
 # create instance of live trading class
 risk = 0.02
-contract = {"contract_type": "Forex", "symbol": "EURUSD"}
+contract = {"contract_type": "Forex", "symbol": "EURUSD", "exchange": "FWB", "currency": "EUR"}
 strategy = EmaCrossoverStrategy(ema_short=50, ema_long=100, length_atr=14, atr_sl=3, atr_limit=0.5, crossover=False)
 trader = LiveIBKREngine(strategy=strategy, contract=contract)
 
@@ -42,50 +42,49 @@ new_units = risk_amt / dist_to_sl if dist_to_sl > 0 else 0
 
 
 # 7. determine which contract to use
-cont = Forex("EURUSD")
-trader.ib.qualifyContracts(cont)
+# 7.1 get current spot price
 trader.ib.reqMarketDataType(3)
-spot_ticker = trader.ib.reqMktData(cont, '', False, False)
-spot_price = spot_ticker.marketPrice()
-ko_contract = Contract(symbol='EUR', secType='WAR')
-details = trader.ib.reqContractDetails(ko_contract)
+eur_usd = Forex('EURUSD')
+spot_ticker = trader.ib.reqMktData(eur_usd, '', False, False)
 
-# 4. get live data and calculate leverage
-cert_list = []
+# 7.2 get the certificates
+contract = Contract(
+    symbol='EUR', 
+    secType='IOPT',
+    exchange='FWB', 
+    currency='EUR',
+    right='C')
+details = trader.ib.reqContractDetails(contract)
+
+# 7.3 get market data for the certificantes
+tickers = []
 for d in details:
-    ticker = trader.ib.reqMktData(d.contract, '', False, False)
-    cert_list.append({
-        'contract': d.contract, 
-        'ticker': ticker
-    })
+    tickers.append(trader.ib.reqMktData(d.contract, '', False, False))
+trader.ib.sleep(4)
+spot_price = spot_ticker.marketPrice()
 
-results = []
-for item in cert_list:
-    c = item['contract']
-    t = item['ticker']
-    
-    # Grab the best available price (Ask is preferred if you are buying)
-    cert_price = t.ask if t.ask == t.ask else t.marketPrice()
-    
-    # Extract the multiplier (IBKR returns this as a string, e.g., '100')
-    try:
-        multiplier = float(c.multiplier)
-    except:
-        multiplier = 1.0
-        
-    # Calculate Leverage
-    if cert_price > 0 and spot_price > 0:
-        leverage = spot_price / (cert_price * multiplier)
-    else:
-        leverage = 0
-        
-    results.append({
-        'Local_Symbol': c.localSymbol,
-        'ConID': c.conId,
-        'Strike': c.strike,
-        'Type': c.right,
-        'Price': cert_price,
-        'Leverage': round(leverage, 2)
+# 7.4 but the data together
+contract_l = []
+for d, t in zip(details, tickers):
+    prices = [t.ask, t.last, t.close, t.marketPrice()]
+    cert_price = next((p for p in prices if p > 0 and p == p), 0)
+    multiplier = float(d.contract.multiplier) if d.contract.multiplier else 1.0
+    barrier = d.contract.strike
+    current_spot = spot_price if spot_price == spot_price else spot_ticker.delayedLast
+    leverage = current_spot / (cert_price * multiplier) if cert_price > 0 else 0
+    dist_to_ko = abs(current_spot - barrier) / current_spot if current_spot > 0 else 0
+
+    contract_l.append({
+        "conId": d.contract.conId,
+        "symbol": d.contract.localSymbol,
+        "multiplier": multiplier,
+        "ko_barrier": barrier,
+        "longname": d.longName,
+        "last_traded": d.contract.lastTradeDateOrContractMonth,
+        "ordertypes": d.orderTypes,
+        "price": cert_price,
+        "leverage": round(leverage, 2),
+        "dist_to_ko_pct": round(dist_to_ko * 100, 2)
     })
 
 
