@@ -214,6 +214,11 @@ class MarketData:
 
         self.df[f'atr.{length}'] = ta.atr(self.df['high'], self.df['low'], self.df['close'], length=length)
         return self
+    
+    
+    def add_rsi(self, column="close", length=14):
+        self.df[f'rsi.{column}.{length}'] = ta.rsi(self.df[column], length=length)
+        return self
 
 
     def add_next(self, column="close", shift=-1):
